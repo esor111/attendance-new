@@ -33,7 +33,12 @@
   - Add lastSyncedAt timestamp handling for data freshness
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.4, 2.5_
 
-- [ ] 4. Create Entity management with PostGIS geospatial functionality
+- [x] 4. Create Entity management with PostGIS geospatial functionality
+
+
+
+
+
   - Create Entity entity with PostGIS GEOGRAPHY(POINT, 4326) location field
   - Implement geohash calculation and storage
   - Add validation for coordinates, radius, and kahaId uniqueness

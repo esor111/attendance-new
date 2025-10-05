@@ -81,14 +81,29 @@ let GlobalExceptionFilter = GlobalExceptionFilter_1 = class GlobalExceptionFilte
             if (message.includes('department_entity_assignments')) {
                 return 'Entity is already assigned to this department';
             }
+            if (message.includes('unique_user_date')) {
+                return 'Attendance record already exists for this user and date';
+            }
+            if (message.includes('user_entity_assignments')) {
+                return 'User is already assigned to this entity';
+            }
             return 'Duplicate entry detected';
         }
         if (message.includes('foreign key constraint') || message.includes('violates foreign key')) {
-            if (message.includes('department')) {
+            if (message.includes('user_id')) {
+                return 'Referenced user does not exist or is not synchronized';
+            }
+            if (message.includes('entity_id')) {
+                return 'Referenced entity does not exist';
+            }
+            if (message.includes('department_id')) {
                 return 'Referenced department does not exist';
             }
-            if (message.includes('entity')) {
-                return 'Referenced entity does not exist';
+            if (message.includes('attendance_id')) {
+                return 'Referenced attendance record does not exist';
+            }
+            if (message.includes('manager_id') || message.includes('employee_id')) {
+                return 'Referenced user in reporting structure does not exist';
             }
             return 'Referenced resource does not exist';
         }
@@ -102,10 +117,51 @@ let GlobalExceptionFilter = GlobalExceptionFilter_1 = class GlobalExceptionFilte
             if (message.includes('radius')) {
                 return 'Radius must be between 10 and 1000 meters';
             }
+            if (message.includes('total_hours')) {
+                return 'Total hours must be between 0 and 24 hours';
+            }
+            if (message.includes('travel_speed')) {
+                return 'Travel speed cannot be negative';
+            }
+            if (message.includes('session_duration')) {
+                return 'Session duration cannot be negative';
+            }
+            if (message.includes('visit_duration')) {
+                return 'Visit duration cannot be negative';
+            }
             return 'Data validation constraint violated';
         }
         if (message.includes('not null constraint') || message.includes('null value')) {
+            if (message.includes('user_id')) {
+                return 'User ID is required';
+            }
+            if (message.includes('entity_id')) {
+                return 'Entity ID is required';
+            }
+            if (message.includes('date')) {
+                return 'Date is required';
+            }
+            if (message.includes('check_in_time')) {
+                return 'Check-in time is required';
+            }
+            if (message.includes('latitude') || message.includes('longitude')) {
+                return 'Location coordinates are required';
+            }
             return 'Required field cannot be empty';
+        }
+        if (message.includes('attendance')) {
+            if (message.includes('clock_out_without_clock_in')) {
+                return 'Cannot clock out without clocking in first';
+            }
+            if (message.includes('session_without_attendance')) {
+                return 'Cannot create session without active daily attendance';
+            }
+            if (message.includes('location_log_without_attendance')) {
+                return 'Cannot create location log without active daily attendance';
+            }
+        }
+        if (message.includes('circular') || message.includes('recursive')) {
+            return 'Circular reference detected in reporting structure';
         }
         return 'Database operation failed';
     }

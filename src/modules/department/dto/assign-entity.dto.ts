@@ -34,7 +34,7 @@ export class DepartmentEntityResponseDto {
     id: string;
     name: string;
     kahaId: string;
-    address: string;
+    address?: string;
     radiusMeters: number;
   };
 }
@@ -46,7 +46,7 @@ export class UserAccessibleEntityDto {
   id: string;
   name: string;
   kahaId: string;
-  address: string;
+  address?: string;
   radiusMeters: number;
   isPrimary: boolean;
   geohash: string;

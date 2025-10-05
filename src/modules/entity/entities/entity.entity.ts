@@ -28,7 +28,7 @@ export class Entity extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   @IsOptional()
   @IsString()
-  address: string;
+  address?: string;
 
   @Column({
     type: 'geography',
@@ -46,17 +46,17 @@ export class Entity extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   @IsOptional()
   @IsString()
-  avatarUrl: string;
+  avatarUrl?: string;
 
   @Column({ type: 'text', nullable: true })
   @IsOptional()
   @IsString()
-  coverImageUrl: string;
+  coverImageUrl?: string;
 
   @Column({ type: 'text', nullable: true })
   @IsOptional()
   @IsString()
-  description: string;
+  description?: string;
 
   @OneToMany(
     () => DepartmentEntityAssignment,

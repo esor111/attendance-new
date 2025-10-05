@@ -20,3 +20,22 @@ export declare class GeospatialValidationException extends HttpException {
         longitude: number;
     });
 }
+export declare class AttendanceStateException extends HttpException {
+    constructor(currentState: string, attemptedAction: string, userId: string);
+    private static getSuggestions;
+}
+export declare class FraudDetectionException extends HttpException {
+    constructor(fraudType: string, details: {
+        travelSpeed?: number;
+        distance?: number;
+        timeMinutes?: number;
+        threshold?: number;
+    });
+    private static buildMessage;
+}
+export declare class ConcurrentOperationException extends HttpException {
+    constructor(userId: string, operationType: string);
+}
+export declare class ReferentialIntegrityException extends HttpException {
+    constructor(entity: string, entityId: string, referencedEntity: string, referencedId: string);
+}

@@ -33,7 +33,22 @@ This specification covers the core attendance functionality for the attendance m
 5. WHEN determining authorized entities THEN the system SHALL check user-specific assignments first, then department assignments
 6. WHEN no authorized entities are found THEN the system SHALL return appropriate error message with nearest available entities
 
-### Requirement 3: Field Worker Location Logging
+### Requirement 3: Session Management (Breaks and Temporary Leaves)
+
+**User Story:** As an employee, I want to check-in and check-out multiple times during my workday for breaks, meetings, and errands so that my presence at the workplace is accurately tracked.
+
+#### Acceptance Criteria
+
+1. WHEN an employee attempts session check-in THEN the system SHALL require an active daily attendance record
+2. WHEN an employee session checks-in THEN the system SHALL record timestamp, coordinates, and session type
+3. WHEN an employee has an active session check-in THEN the system SHALL prevent new session check-ins until check-out
+4. WHEN an employee session checks-out THEN the system SHALL calculate session duration and travel speed
+5. WHEN calculating travel speed between sessions THEN the system SHALL flag speeds exceeding 200 km/h
+6. WHEN an employee session checks-in THEN the system SHALL validate location is within the entity radius
+7. IF session location is outside entity radius THEN the system SHALL reject the session check-in request
+8. WHEN creating session records THEN the system SHALL support session types: work, break, lunch, meeting, errand
+
+### Requirement 4: Field Worker Location Logging
 
 **User Story:** As a field worker, I want to check-in and check-out at multiple client sites during my workday so that my visits are tracked for billing and reporting.
 
@@ -47,7 +62,7 @@ This specification covers the core attendance functionality for the attendance m
 6. WHEN a field worker checks-in THEN the system SHALL validate location is within the specified entity radius
 7. IF location is outside entity radius THEN the system SHALL reject the check-in request
 
-### Requirement 4: User-Specific Entity Assignments
+### Requirement 5: User-Specific Entity Assignments
 
 **User Story:** As a system admin, I want to assign specific entities to individual users so that certain employees can access locations beyond their department assignments.
 
@@ -60,7 +75,7 @@ This specification covers the core attendance functionality for the attendance m
 5. WHEN removing user-entity assignments THEN the system SHALL preserve historical attendance records
 6. WHEN creating user-entity assignments THEN the system SHALL prevent duplicate assignments for the same user-entity pair
 
-### Requirement 5: Reporting and Manager Access
+### Requirement 6: Reporting and Manager Access
 
 **User Story:** As a manager, I want to view attendance reports for my team members so that I can monitor attendance patterns and identify issues.
 
@@ -74,7 +89,7 @@ This specification covers the core attendance functionality for the attendance m
 6. WHEN attendance records are flagged THEN the system SHALL highlight them in manager reports
 7. WHEN calculating attendance statistics THEN the system SHALL handle partial days and missing clock-outs appropriately
 
-### Requirement 6: Fraud Detection and Data Integrity
+### Requirement 7: Fraud Detection and Data Integrity
 
 **User Story:** As the system, I want to detect potentially fraudulent attendance records so that data integrity is maintained.
 
@@ -87,7 +102,7 @@ This specification covers the core attendance functionality for the attendance m
 5. WHEN multiple suspicious activities are detected THEN the system SHALL escalate the flag priority
 6. WHEN flagged records exist THEN the system SHALL notify managers through the reporting interface
 
-### Requirement 7: Reporting Structure Management
+### Requirement 8: Reporting Structure Management
 
 **User Story:** As a system admin, I want to define reporting relationships between employees and managers so that managers can access their team's attendance data.
 
@@ -100,7 +115,7 @@ This specification covers the core attendance functionality for the attendance m
 5. WHEN reporting relationships change THEN the system SHALL immediately update manager access permissions
 6. WHEN creating circular reporting relationships THEN the system SHALL prevent and reject such assignments
 
-### Requirement 8: Data Consistency and Performance
+### Requirement 9: Data Consistency and Performance
 
 **User Story:** As the system, I want to maintain data consistency and optimal performance so that the application remains responsive under load.
 

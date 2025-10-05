@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   kaha-hostel-api:
-    image: node:18-alpine
+    image: node:20-alpine
     container_name: attendance-management
     working_dir: /app
     network_mode: host

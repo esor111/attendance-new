@@ -1,3 +1,9 @@
+// Crypto polyfill for Node.js compatibility
+import { randomUUID } from 'crypto';
+if (!globalThis.crypto) {
+  globalThis.crypto = { randomUUID } as any;
+}
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';

@@ -30,11 +30,11 @@ __decorate([
     __metadata("design:type", String)
 ], Department.prototype, "businessId", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => user_entity_1.User, (user) => user.department),
+    (0, typeorm_1.OneToMany)(() => user_entity_1.User, (user) => user.department, { cascade: false }),
     __metadata("design:type", Array)
 ], Department.prototype, "users", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => department_entity_assignment_entity_1.DepartmentEntityAssignment, (assignment) => assignment.department),
+    (0, typeorm_1.OneToMany)(() => department_entity_assignment_entity_1.DepartmentEntityAssignment, (assignment) => assignment.department, { cascade: ['remove'] }),
     __metadata("design:type", Array)
 ], Department.prototype, "entityAssignments", void 0);
 exports.Department = Department = __decorate([

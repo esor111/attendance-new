@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DepartmentController = void 0;
 const common_1 = require("@nestjs/common");
+const swagger_1 = require("@nestjs/swagger");
 const department_service_1 = require("./department.service");
 const dto_1 = require("./dto");
 let DepartmentController = class DepartmentController {
@@ -86,6 +87,25 @@ let DepartmentController = class DepartmentController {
 };
 exports.DepartmentController = DepartmentController;
 __decorate([
+    (0, swagger_1.ApiOperation)({
+        summary: 'Create new department',
+        description: 'Creates a new department within a business with unique name validation.',
+    }),
+    (0, swagger_1.ApiBody)({
+        type: dto_1.CreateDepartmentDto,
+        description: 'Department creation data',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Department created successfully',
+        type: dto_1.DepartmentResponseDto,
+    }),
+    (0, swagger_1.ApiBadRequestResponse)({
+        description: 'Validation failed',
+    }),
+    (0, swagger_1.ApiConflictResponse)({
+        description: 'Department name already exists in this business',
+    }),
     (0, common_1.Post)(),
     __param(0, (0, common_1.Body)(common_1.ValidationPipe)),
     __metadata("design:type", Function),
@@ -125,6 +145,30 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], DepartmentController.prototype, "deleteDepartment", null);
 __decorate([
+    (0, swagger_1.ApiOperation)({
+        summary: 'Assign entity to department',
+        description: 'Assigns a business entity to a department with optional primary designation.',
+    }),
+    (0, swagger_1.ApiParam)({
+        name: 'departmentId',
+        description: 'Department UUID',
+        example: '123e4567-e89b-12d3-a456-426614174000',
+    }),
+    (0, swagger_1.ApiBody)({
+        type: dto_1.AssignEntityDto,
+        description: 'Entity assignment data',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Entity assigned successfully',
+        type: dto_1.DepartmentEntityResponseDto,
+    }),
+    (0, swagger_1.ApiNotFoundResponse)({
+        description: 'Department or entity not found',
+    }),
+    (0, swagger_1.ApiConflictResponse)({
+        description: 'Entity already assigned to this department',
+    }),
     (0, common_1.Post)(':departmentId/entities'),
     __param(0, (0, common_1.Param)('departmentId', common_1.ParseUUIDPipe)),
     __param(1, (0, common_1.Body)()),
@@ -165,6 +209,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], DepartmentController.prototype, "getDepartmentWithEntities", null);
 exports.DepartmentController = DepartmentController = __decorate([
+    (0, swagger_1.ApiTags)('departments'),
     (0, common_1.Controller)('departments'),
     __metadata("design:paramtypes", [department_service_1.DepartmentService])
 ], DepartmentController);

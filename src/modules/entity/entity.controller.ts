@@ -12,6 +12,17 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
+  ApiQuery,
+  ApiBadRequestResponse,
+  ApiNotFoundResponse,
+  ApiConflictResponse,
+} from '@nestjs/swagger';
 import { EntityService } from './entity.service';
 import {
   CreateEntityDto,
@@ -30,6 +41,7 @@ import { Entity } from './entities/entity.entity';
  * Handles creation, search, and geospatial validation operations
  * Requirements: 5.1, 6.1
  */
+@ApiTags('entities')
 @Controller('entities')
 export class EntityController {
   constructor(private readonly entityService: EntityService) {}
@@ -39,6 +51,25 @@ export class EntityController {
    * POST /entities
    * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
    */
+  @ApiOperation({
+    summary: 'Create new business location',
+    description: 'Creates a new entity (business location) with geospatial coordinates and validation.',
+  })
+  @ApiBody({
+    type: CreateEntityDto,
+    description: 'Entity creation data with coordinates and radius',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Entity created successfully',
+    type: EntityResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Validation failed - invalid coordinates or radius',
+  })
+  @ApiConflictResponse({
+    description: 'KahaId already exists',
+  })
   @Post()
   async create(@Body(ValidationPipe) createEntityDto: CreateEntityDto): Promise<EntityResponseDto> {
     const entity = await this.entityService.create(createEntityDto);
@@ -49,6 +80,36 @@ export class EntityController {
    * Search for nearby entities based on coordinates
    * GET /entities/nearby?latitude=27.7172&longitude=85.3240&radiusMeters=1000
    */
+  @ApiOperation({
+    summary: 'Find nearby entities',
+    description: 'Searches for business entities within specified radius using PostGIS spatial queries.',
+  })
+  @ApiQuery({
+    name: 'latitude',
+    description: 'Latitude coordinate',
+    example: 27.7172,
+    type: Number,
+  })
+  @ApiQuery({
+    name: 'longitude',
+    description: 'Longitude coordinate',
+    example: 85.3240,
+    type: Number,
+  })
+  @ApiQuery({
+    name: 'radiusMeters',
+    description: 'Search radius in meters',
+    example: 1000,
+    type: Number,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Nearby entities found',
+    type: [NearbyEntityDto],
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid coordinates or radius',
+  })
   @Get('nearby')
   async findNearby(@Query(ValidationPipe) proximitySearchDto: ProximitySearchDto): Promise<NearbyEntityDto[]> {
     return await this.entityService.findNearby(proximitySearchDto);
@@ -58,6 +119,37 @@ export class EntityController {
    * Validate if a location is within an entity's allowed radius
    * POST /entities/:id/validate-location
    */
+  @ApiOperation({
+    summary: 'Validate location within entity radius',
+    description: 'Validates if provided coordinates are within the entity\'s allowed check-in radius.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Entity UUID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiBody({
+    description: 'Location coordinates to validate',
+    schema: {
+      type: 'object',
+      properties: {
+        latitude: { type: 'number', example: 27.7172 },
+        longitude: { type: 'number', example: 85.3240 },
+      },
+      required: ['latitude', 'longitude'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Location validation result',
+    type: LocationValidationResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'Entity not found',
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid coordinates or location outside radius',
+  })
   @Post(':id/validate-location')
   async validateLocation(
     @Param('id', ParseUUIDPipe) entityId: string,

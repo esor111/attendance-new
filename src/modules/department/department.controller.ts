@@ -12,6 +12,17 @@ import {
   HttpCode,
   HttpStatus 
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
+  ApiQuery,
+  ApiBadRequestResponse,
+  ApiNotFoundResponse,
+  ApiConflictResponse,
+} from '@nestjs/swagger';
 import { DepartmentService } from './department.service';
 import { 
   AssignEntityDto, 
@@ -27,6 +38,7 @@ import {
  * Handles CRUD operations and entity assignments
  * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 7.1, 7.2, 7.3, 7.4, 7.5
  */
+@ApiTags('departments')
 @Controller('departments')
 export class DepartmentController {
   constructor(private readonly departmentService: DepartmentService) {}
@@ -36,6 +48,25 @@ export class DepartmentController {
    * POST /departments
    * Requirements: 3.1, 3.2, 3.3
    */
+  @ApiOperation({
+    summary: 'Create new department',
+    description: 'Creates a new department within a business with unique name validation.',
+  })
+  @ApiBody({
+    type: CreateDepartmentDto,
+    description: 'Department creation data',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Department created successfully',
+    type: DepartmentResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Validation failed',
+  })
+  @ApiConflictResponse({
+    description: 'Department name already exists in this business',
+  })
   @Post()
   async createDepartment(
     @Body(ValidationPipe) createDepartmentDto: CreateDepartmentDto,
@@ -99,6 +130,30 @@ export class DepartmentController {
    * Assign an entity to a department
    * POST /departments/:departmentId/entities
    */
+  @ApiOperation({
+    summary: 'Assign entity to department',
+    description: 'Assigns a business entity to a department with optional primary designation.',
+  })
+  @ApiParam({
+    name: 'departmentId',
+    description: 'Department UUID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiBody({
+    type: AssignEntityDto,
+    description: 'Entity assignment data',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Entity assigned successfully',
+    type: DepartmentEntityResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'Department or entity not found',
+  })
+  @ApiConflictResponse({
+    description: 'Entity already assigned to this department',
+  })
   @Post(':departmentId/entities')
   async assignEntity(
     @Param('departmentId', ParseUUIDPipe) departmentId: string,

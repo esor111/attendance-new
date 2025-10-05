@@ -10,6 +10,7 @@ exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const typeorm_1 = require("@nestjs/typeorm");
+const core_1 = require("@nestjs/core");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const auth_module_1 = require("./auth/auth.module");
@@ -18,6 +19,9 @@ const user_module_1 = require("./modules/user/user.module");
 const department_module_1 = require("./modules/department/department.module");
 const entity_module_1 = require("./modules/entity/entity.module");
 const database_config_1 = require("./config/database.config");
+const global_exception_filter_1 = require("./common/filters/global-exception.filter");
+const validation_pipe_1 = require("./common/pipes/validation.pipe");
+const validation_service_1 = require("./common/services/validation.service");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -39,7 +43,18 @@ exports.AppModule = AppModule = __decorate([
             entity_module_1.EntityModule,
         ],
         controllers: [app_controller_1.AppController],
-        providers: [app_service_1.AppService],
+        providers: [
+            app_service_1.AppService,
+            validation_service_1.ValidationService,
+            {
+                provide: core_1.APP_FILTER,
+                useClass: global_exception_filter_1.GlobalExceptionFilter,
+            },
+            {
+                provide: core_1.APP_PIPE,
+                useClass: validation_pipe_1.EnhancedValidationPipe,
+            },
+        ],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
+import { NotFoundException } from '@nestjs/common';
 import { EntityService } from './entity.service';
 import { Entity } from './entities/entity.entity';
 import { CreateEntityDto, ProximitySearchDto, LocationValidationDto } from './dto';

@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DepartmentEntityAssignment = void 0;
 const typeorm_1 = require("typeorm");
+const class_validator_1 = require("class-validator");
 const base_entity_1 = require("../../../common/entities/base.entity");
 const department_entity_1 = require("./department.entity");
 const entity_entity_1 = require("../../entity/entities/entity.entity");
@@ -19,14 +20,17 @@ let DepartmentEntityAssignment = class DepartmentEntityAssignment extends base_e
 exports.DepartmentEntityAssignment = DepartmentEntityAssignment;
 __decorate([
     (0, typeorm_1.Column)({ type: 'uuid' }),
+    (0, class_validator_1.IsUUID)(4, { message: 'DepartmentId must be a valid UUID' }),
     __metadata("design:type", String)
 ], DepartmentEntityAssignment.prototype, "departmentId", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'uuid' }),
+    (0, class_validator_1.IsUUID)(4, { message: 'EntityId must be a valid UUID' }),
     __metadata("design:type", String)
 ], DepartmentEntityAssignment.prototype, "entityId", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'boolean', default: false }),
+    (0, class_validator_1.IsBoolean)({ message: 'isPrimary must be a boolean value' }),
     __metadata("design:type", Boolean)
 ], DepartmentEntityAssignment.prototype, "isPrimary", void 0);
 __decorate([

@@ -80,9 +80,18 @@
   - Implement proper cascade delete and foreign key constraint handling
   - Add validation for all business rules and constraints
   - Create error messages for location validation failures
+    - Add Swagger/OpenAPI documentation with @ApiProperty decorators for all DTOs
+  - Include controller descriptions and example data for each endpoint
+  - Use class-validator decorators for validation with descriptive error messages
+  - Configure Swagger UI with proper API documentation structure
   - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 9.5_
 
-- [ ] 9. Add comprehensive testing and validation
+- [ ] 9. Add comprehensive testing, validation, and API documentation
+
+
+
+
+
   - Write unit tests for all service methods and business logic
   - Create integration tests for handshake process and external API calls
   - Test geospatial calculations and PostGIS spatial queries

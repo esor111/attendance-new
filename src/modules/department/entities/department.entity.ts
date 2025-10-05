@@ -21,12 +21,13 @@ export class Department extends BaseEntity {
   @IsUUID(4, { message: 'BusinessId must be a valid UUID' })
   businessId: string; // Reference to business from external microservice
 
-  @OneToMany(() => User, (user) => user.department)
+  @OneToMany(() => User, (user) => user.department, { cascade: false })
   users: User[];
 
   @OneToMany(
     () => DepartmentEntityAssignment,
     (assignment) => assignment.department,
+    { cascade: ['remove'] }
   )
   entityAssignments: DepartmentEntityAssignment[];
 }

@@ -7,6 +7,16 @@ import {
   ParseUUIDPipe, 
   ValidationPipe 
 } from '@nestjs/common';
+import { 
+  ApiTags, 
+  ApiOperation, 
+  ApiResponse, 
+  ApiParam, 
+  ApiBody,
+  ApiBadRequestResponse,
+  ApiNotFoundResponse,
+  ApiConflictResponse,
+} from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { User } from './entities/user.entity';
 import { 
@@ -23,6 +33,7 @@ import {
  * Handles profile retrieval and updates as per requirements
  * Demonstrates handshake process integration
  */
+@ApiTags('users')
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -34,6 +45,26 @@ export class UserController {
    * @param userId External user ID from User Microservice
    * @returns User data with populated local record
    */
+  @ApiOperation({
+    summary: 'Get user by external ID (Handshake Process)',
+    description: 'Retrieves user data by external userId. If user does not exist locally, automatically fetches from User Microservice and saves locally.',
+  })
+  @ApiParam({
+    name: 'userId',
+    description: 'External user ID from User Microservice',
+    example: 'ext-user-123',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User data retrieved successfully',
+    type: User,
+  })
+  @ApiNotFoundResponse({
+    description: 'User not found in external service',
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid user ID format',
+  })
   @Get('external/:userId')
   async getUserByExternalId(@Param('userId') userId: string): Promise<User> {
     return this.userService.getUserByExternalId(userId);
@@ -46,6 +77,20 @@ export class UserController {
    * @param userId External user ID
    * @returns Boolean indicating local existence
    */
+  @ApiOperation({
+    summary: 'Check if user exists locally',
+    description: 'Checks if user exists in local database without triggering external API call.',
+  })
+  @ApiParam({
+    name: 'userId',
+    description: 'External user ID to check',
+    example: 'ext-user-123',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User existence check completed',
+    type: UserExistsResponseDto,
+  })
   @Get('external/:userId/exists')
   async checkUserExists(@Param('userId') userId: string): Promise<UserExistsResponseDto> {
     const user = await this.userService.findByExternalUserId(userId);
@@ -61,6 +106,26 @@ export class UserController {
    * GET /users/:id/profile
    * Requirements: 4.1 - Profile retrieval with department relationship
    */
+  @ApiOperation({
+    summary: 'Get user profile',
+    description: 'Retrieves complete user profile including department relationship.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Internal user UUID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User profile retrieved successfully',
+    type: UserProfileResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'User not found',
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid UUID format',
+  })
   @Get(':id/profile')
   async getUserProfile(@Param('id', ParseUUIDPipe) id: string): Promise<UserProfileResponseDto> {
     const user = await this.userService.findByIdWithDepartment(id);
@@ -89,6 +154,33 @@ export class UserController {
    * PUT /users/:id/profile
    * Requirements: 4.2, 4.3, 4.4, 4.5 - Profile updates with validation
    */
+  @ApiOperation({
+    summary: 'Update user profile',
+    description: 'Updates user profile information with validation for email/phone uniqueness.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Internal user UUID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiBody({
+    type: UpdateUserProfileDto,
+    description: 'User profile update data',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User profile updated successfully',
+    type: UserProfileResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'User not found',
+  })
+  @ApiBadRequestResponse({
+    description: 'Validation failed',
+  })
+  @ApiConflictResponse({
+    description: 'Email or phone already in use',
+  })
   @Put(':id/profile')
   async updateUserProfile(
     @Param('id', ParseUUIDPipe) id: string,

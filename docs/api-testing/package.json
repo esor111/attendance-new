@@ -1,0 +1,14 @@
+{
+  "name": "attendance-api-tests",
+  "version": "1.0.0",
+  "description": "API testing tools for Attendance Microservice",
+  "main": "test-runner.js",
+  "scripts": {
+    "test": "node test-runner.js",
+    "test:powershell": "powershell -ExecutionPolicy Bypass -File test-all-apis.ps1",
+    "test:bash": "bash test-all-apis.sh"
+  },
+  "keywords": ["api", "testing", "attendance", "microservice"],
+  "author": "Attendance Team",
+  "license": "MIT"
+}

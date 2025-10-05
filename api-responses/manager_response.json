@@ -1,0 +1,7 @@
+{
+  "statusCode": 404,
+  "message": "Cannot POST /users",
+  "timestamp": "2025-10-05T13:25:00.305Z",
+  "path": "/users",
+  "method": "POST"
+}

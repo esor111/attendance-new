@@ -10,6 +10,7 @@ import { UserModule } from './modules/user/user.module';
 import { DepartmentModule } from './modules/department/department.module';
 import { EntityModule } from './modules/entity/entity.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
+import { LeaveModule } from './modules/leave/leave.module';
 import { getDatabaseConfig } from './config/database.config';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { EnhancedValidationPipe } from './common/pipes/validation.pipe';
@@ -36,6 +37,7 @@ import { ValidationService } from './common/services/validation.service';
     DepartmentModule,
     EntityModule,
     AttendanceModule,
+    LeaveModule,
   ],
   controllers: [AppController],
   providers: [

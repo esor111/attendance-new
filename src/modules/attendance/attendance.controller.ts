@@ -21,6 +21,7 @@ export class AttendanceController {
 
   /**
    * Clock-in endpoint - Start daily attendance
+   * Supports both office and field work locations
    */
   @Post('clock-in')
   async clockIn(@CurrentUser() user: any, @Body() clockInDto: ClockInDto) {

@@ -1,0 +1,141 @@
+{
+  "departments": {
+    "create": {
+      "success": true,
+      "id": "7fe04bf4-8f9a-481c-be1f-d1a42a658f9f"
+    },
+    "list": {
+      "success": true,
+      "count": 4
+    }
+  },
+  "entities": {
+    "mainOffice": {
+      "success": true,
+      "id": "b92c606e-f0ce-4edb-8094-9b642900c7a3"
+    },
+    "clientSite": {
+      "success": true,
+      "id": "211bd8b8-5335-47f2-b0b2-5482d0315b21"
+    },
+    "list": {
+      "success": true,
+      "data": {
+        "entities": [
+          {
+            "id": "211bd8b8-5335-47f2-b0b2-5482d0315b21",
+            "name": "Client Site 1759671372967",
+            "kahaId": "CLIENT-1759671372967",
+            "address": "Lalitpur Business Center, Lalitpur",
+            "radiusMeters": 150,
+            "assignedDepartments": 0,
+            "createdAt": "2025-10-05T13:36:11.076Z"
+          },
+          {
+            "id": "b92c606e-f0ce-4edb-8094-9b642900c7a3",
+            "name": "Main Office 1759671372967",
+            "kahaId": "MAIN-1759671372967",
+            "address": "Kathmandu Plaza, Kamaladi, Kathmandu",
+            "radiusMeters": 100,
+            "assignedDepartments": 0,
+            "createdAt": "2025-10-05T13:36:11.020Z"
+          },
+          {
+            "id": "f9c47d6b-8447-407f-9c76-af15f9c97ded",
+            "name": "Client Site 1759670780598",
+            "kahaId": "CLIENT-1759670780598",
+            "address": "Lalitpur Business Center, Lalitpur",
+            "radiusMeters": 150,
+            "assignedDepartments": 0,
+            "createdAt": "2025-10-05T13:26:17.017Z"
+          },
+          {
+            "id": "a162fdd6-cb21-48c3-9a34-6eaea519f772",
+            "name": "Main Office 1759670780598",
+            "kahaId": "MAIN-1759670780598",
+            "address": "Kathmandu Plaza, Kamaladi, Kathmandu",
+            "radiusMeters": 100,
+            "assignedDepartments": 0,
+            "createdAt": "2025-10-05T13:26:16.991Z"
+          },
+          {
+            "id": "7d8c505c-2c4e-489a-b85f-cd15c4f78c8b",
+            "name": "Client Site ABC Corp 1759670700101",
+            "kahaId": "CLIENT-ABC-1759670700101",
+            "address": "Lalitpur Business Center, Lalitpur",
+            "radiusMeters": 150,
+            "assignedDepartments": 0,
+            "createdAt": "2025-10-05T13:24:56.633Z"
+          },
+          {
+            "id": "11ede259-1008-4d91-9d3f-251667ec98ce",
+            "name": "Main Office Kathmandu 1759670700101",
+            "kahaId": "KTM-MAIN-1759670700101",
+            "address": "Kathmandu Plaza, Kamaladi, Kathmandu",
+            "radiusMeters": 100,
+            "assignedDepartments": 0,
+            "createdAt": "2025-10-05T13:24:56.604Z"
+          },
+          {
+            "id": "f73fbaba-cb59-4c24-b822-afd7d71c3e8e",
+            "name": "Client Site ABC Corp",
+            "kahaId": "CLIENT-ABC-001",
+            "address": "Lalitpur Business Center, Lalitpur",
+            "radiusMeters": 150,
+            "assignedDepartments": 0,
+            "createdAt": "2025-10-05T13:21:15.745Z"
+          },
+          {
+            "id": "6364874a-b683-4d9d-82e1-8df0cfb846c8",
+            "name": "Main Office Kathmandu",
+            "kahaId": "KTM-MAIN-001",
+            "address": "Kathmandu Plaza, Kamaladi, Kathmandu",
+            "radiusMeters": 100,
+            "assignedDepartments": 0,
+            "createdAt": "2025-10-05T13:21:15.711Z"
+          }
+        ],
+        "totalCount": 8
+      }
+    },
+    "nearby": {
+      "success": false,
+      "error": {
+        "statusCode": 409,
+        "message": "Database operation failed",
+        "timestamp": "2025-10-05T13:36:13.281Z",
+        "path": "/entities/nearby?latitude=27.7172&longitude=85.3240&radiusMeters=5000",
+        "method": "GET"
+      }
+    }
+  },
+  "attendance": {
+    "clockIn": {
+      "success": false,
+      "error": {
+        "statusCode": 401,
+        "message": "Unauthorized",
+        "timestamp": "2025-10-05T13:36:13.312Z",
+        "path": "/api/attendance/clock-in",
+        "method": "POST"
+      },
+      "statusCode": 401
+    }
+  },
+  "summary": {
+    "total": 8,
+    "passed": 5,
+    "failed": 2
+  },
+  "users": {
+    "success": false,
+    "error": {
+      "statusCode": 404,
+      "message": "Cannot GET /users",
+      "timestamp": "2025-10-05T13:36:13.305Z",
+      "path": "/users",
+      "method": "GET"
+    },
+    "statusCode": 404
+  }
+}

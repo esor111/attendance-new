@@ -1,0 +1,20 @@
+{
+  "id": "11ede259-1008-4d91-9d3f-251667ec98ce",
+  "name": "Main Office Kathmandu 1759670700101",
+  "kahaId": "KTM-MAIN-1759670700101",
+  "address": "Kathmandu Plaza, Kamaladi, Kathmandu",
+  "geohash": "tuutttg0",
+  "location": {
+    "type": "Point",
+    "coordinates": [
+      85.324,
+      27.7172
+    ]
+  },
+  "radiusMeters": 100,
+  "avatarUrl": null,
+  "coverImageUrl": null,
+  "description": "Main headquarters building",
+  "createdAt": "2025-10-05T13:24:56.604Z",
+  "updatedAt": "2025-10-05T13:24:56.604Z"
+}

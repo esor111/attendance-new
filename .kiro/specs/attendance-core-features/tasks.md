@@ -131,3 +131,118 @@
   - Test field worker location logging with travel speed analysis
   - Test manager reporting access with team hierarchy validation
   - _Requirements: All error handling and testing requirements_
+
+- [x] 8. Implement Leave Management System
+
+
+
+  - Create LeaveType entity with name, max days per year, approval requirements, and carry forward rules
+  - Create LeaveRequest entity with user, leave type, date range, status, and approval workflow
+  - Create LeaveBalance entity with allocated, used, and remaining leave calculations
+  - Implement LeaveService with request creation, approval workflow, and balance management
+  - Implement LeaveApprovalService with manager approval logic and notification system
+  - Implement LeaveBalanceService with automatic balance calculations and year-end processing
+  - Create POST /api/leave/request endpoint for leave request submission
+  - Create GET /api/leave/requests endpoint for user's leave request history
+  - Create POST /api/leave/approve/:id endpoint for manager approval actions
+  - Create GET /api/leave/team-requests endpoint for manager to view team leave requests
+  - Create GET /api/leave/balance endpoint for user's current leave balances
+  - Add validation for leave request conflicts, sufficient balance, and approval permissions
+  - _Requirements: Leave management functionality_
+
+- [x] 9. Implement Remote Work Management
+
+
+
+
+
+  - Extend DailyAttendance entity with workLocation enum (OFFICE, REMOTE, FIELD)
+  - Add remoteLocation, isRemoteApproved, and remoteApproverId fields to DailyAttendance
+  - Create RemoteWorkRequest entity with user, requested date, reason, location, and approval status
+  - Implement RemoteWorkService with request creation and approval workflow
+  - Extend AttendanceService to handle remote work clock-in/out with different validation rules
+  - Update FraudDetectionService to handle remote work patterns and location validation
+  - Create POST /api/remote-work/request endpoint for remote work requests
+  - Create GET /api/remote-work/requests endpoint for user's remote work history
+  - Create POST /api/remote-work/approve/:id endpoint for manager approval
+  - Create GET /api/remote-work/team-requests endpoint for manager team oversight
+  - Update existing attendance endpoints to support remote work location tracking
+  - Add validation for remote work policies, advance notice requirements, and approval limits
+  - _Requirements: Remote work functionality_
+
+- [ ] 10. Implement Holiday Management System
+  - Create Holiday entity with name, date, type (NATIONAL, COMPANY, DEPARTMENT), and recurrence
+  - Create HolidayCalendar entity with year, department association, and holiday relationships
+  - Implement HolidayService with holiday creation, calendar management, and date checking
+  - Implement HolidayCalendarService with automatic calendar generation and department-specific holidays
+  - Update AttendanceService to check holidays before allowing attendance operations
+  - Create POST /api/holidays endpoint for holiday creation (admin only)
+  - Create GET /api/holidays endpoint for holiday calendar retrieval with date range filtering
+  - Create GET /api/holidays/calendar/:year endpoint for yearly holiday calendar
+  - Create PUT /api/holidays/:id endpoint for holiday updates
+  - Create DELETE /api/holidays/:id endpoint for holiday removal
+  - Add validation for holiday conflicts, department permissions, and recurring holiday logic
+  - Update reporting services to exclude holidays from attendance calculations
+  - _Requirements: Holiday management functionality_
+
+- [ ] 11. Implement Missed Attendance Tracking and Correction
+  - Create MissedAttendance entity with user, missed date, type (NO_CLOCK_IN, NO_CLOCK_OUT, BOTH), and approval status
+  - Create AttendanceCorrection entity with original attendance reference, corrected times, reason, and approval workflow
+  - Implement MissedAttendanceService with automatic detection, manual reporting, and approval workflow
+  - Implement AttendanceCorrectionService with correction request handling and approval logic
+  - Add automated daily job to detect missed attendance and create records
+  - Update ReportingService to include missed attendance in team reports and analytics
+  - Create POST /api/attendance/missed/report endpoint for manual missed attendance reporting
+  - Create GET /api/attendance/missed endpoint for user's missed attendance history
+  - Create POST /api/attendance/correction/request endpoint for attendance correction requests
+  - Create POST /api/attendance/missed/approve/:id endpoint for manager approval of missed attendance
+  - Create POST /api/attendance/correction/approve/:id endpoint for manager approval of corrections
+  - Add validation for correction time limits, approval permissions, and business rule compliance
+  - _Requirements: Missed attendance and correction functionality_
+
+- [ ] 12. Implement Shift Management System
+  - Create ShiftTemplate entity with name, start/end times, break duration, and active status
+  - Create UserShiftAssignment entity with user, shift template, effective dates, and active status
+  - Create ShiftSchedule entity with user, shift, schedule date, and type (SCHEDULED, SWAPPED, OVERTIME)
+  - Implement ShiftService with template management, user assignment, and schedule generation
+  - Implement ShiftSchedulingService with automatic schedule creation and conflict resolution
+  - Implement ShiftSwapService with swap request handling, approval workflow, and schedule updates
+  - Update AttendanceService to validate clock-in/out times against assigned shifts
+  - Create POST /api/shifts/templates endpoint for shift template creation (admin only)
+  - Create GET /api/shifts/templates endpoint for available shift templates
+  - Create POST /api/shifts/assign endpoint for user shift assignments
+  - Create GET /api/shifts/schedule endpoint for user's shift schedule with date range
+  - Create POST /api/shifts/swap/request endpoint for shift swap requests
+  - Create POST /api/shifts/swap/approve/:id endpoint for shift swap approvals
+  - Add validation for shift conflicts, assignment overlaps, and swap eligibility rules
+  - _Requirements: Shift management functionality_
+
+- [ ] 13. Implement Department Schedule Management
+  - Create DepartmentSchedule entity with department, name, weekly schedule JSON, and effective dates
+  - Create ScheduleException entity with department, exception date, type, and modified hours
+  - Implement DepartmentScheduleService with schedule creation, exception handling, and validation
+  - Update AttendanceService to validate attendance against department schedules and exceptions
+  - Extend ReportingService to include schedule-based analytics and compliance reports
+  - Create POST /api/schedules/department endpoint for department schedule creation
+  - Create GET /api/schedules/department/:departmentId endpoint for department schedule retrieval
+  - Create POST /api/schedules/exceptions endpoint for schedule exception creation
+  - Create GET /api/schedules/exceptions endpoint for schedule exceptions with date filtering
+  - Create PUT /api/schedules/department/:id endpoint for schedule updates
+  - Add validation for schedule conflicts, department permissions, and exception logic
+  - Update existing attendance validation to respect department-specific working hours
+  - _Requirements: Department schedule functionality_
+
+- [ ] 14. Integrate and Test All New Features
+  - Update existing attendance validation to work with leaves, holidays, shifts, and schedules
+  - Extend fraud detection to handle new attendance patterns and remote work scenarios
+  - Update reporting services to include comprehensive analytics for all new features
+  - Create integration tests for leave approval workflows with attendance blocking
+  - Test remote work approval integration with attendance location validation
+  - Test holiday calendar integration with attendance prevention and reporting
+  - Test missed attendance detection with automatic correction workflows
+  - Test shift-based attendance validation with schedule compliance
+  - Test department schedule integration with exception handling
+  - Create comprehensive API tests for all new endpoints with proper authorization
+  - Update existing API tests to work with new attendance validation rules
+  - Add performance tests for complex queries involving multiple feature interactions
+  - _Requirements: Integration and comprehensive testing of all features_

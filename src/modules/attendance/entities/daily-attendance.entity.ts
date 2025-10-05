@@ -1,5 +1,5 @@
 import { Entity, Column, ManyToOne, JoinColumn, OneToMany, Unique, Index } from 'typeorm';
-import { IsUUID, IsOptional, IsNumber, IsBoolean, IsString, Min, Max } from 'class-validator';
+import { IsUUID, IsOptional, IsNumber, IsBoolean, IsString, Min, Max, IsIn } from 'class-validator';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { User } from '../../user/entities/user.entity';
 import { Entity as BusinessEntity } from '../../entity/entities/entity.entity';
@@ -100,6 +100,29 @@ export class DailyAttendance extends BaseEntity {
   @IsOptional()
   @IsString({ message: 'Notes must be a string' })
   notes?: string;
+
+  // Remote Work Management Fields
+  @Column({ 
+    type: 'enum', 
+    enum: ['OFFICE', 'REMOTE', 'FIELD'], 
+    default: 'OFFICE' 
+  })
+  @IsString({ message: 'Work location must be a valid enum value' })
+  workLocation: 'OFFICE' | 'REMOTE' | 'FIELD';
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  @IsOptional()
+  @IsString({ message: 'Remote location must be a string' })
+  remoteLocation?: string;
+
+  @Column({ type: 'boolean', default: false })
+  @IsBoolean({ message: 'isRemoteApproved must be a boolean value' })
+  isRemoteApproved: boolean;
+
+  @Column({ type: 'uuid', nullable: true })
+  @IsOptional()
+  @IsUUID(4, { message: 'Remote approver ID must be a valid UUID' })
+  remoteApproverId?: string;
 
   // Relationships
   @ManyToOne(() => User, { eager: false })

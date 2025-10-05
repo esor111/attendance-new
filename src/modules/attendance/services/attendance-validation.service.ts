@@ -8,6 +8,7 @@ import {
 } from '../../../common/exceptions/business-logic.exceptions';
 import { FraudDetectionService } from './fraud-detection.service';
 import { GeospatialService } from './geospatial.service';
+import { RemoteWorkService } from './remote-work.service';
 
 /**
  * Attendance Validation Service - Comprehensive validation for attendance operations
@@ -21,6 +22,7 @@ export class AttendanceValidationService {
   constructor(
     private readonly fraudDetectionService: FraudDetectionService,
     private readonly geospatialService: GeospatialService,
+    private readonly remoteWorkService: RemoteWorkService,
   ) {}
 
   /**
@@ -438,6 +440,110 @@ export class AttendanceValidationService {
     if (latitude === 0 && longitude === 0) {
       this.logger.warn('Coordinates (0,0) detected - may indicate GPS failure');
     }
+  }
+
+  /**
+   * Validate remote work clock-in operation
+   */
+  async validateRemoteWorkClockIn(
+    queryRunner: QueryRunner,
+    userId: string,
+    latitude: number,
+    longitude: number,
+    date: Date,
+    remoteLocation: string,
+  ): Promise<{
+    isApproved: boolean;
+    fraudAnalysis: any;
+  }> {
+    // Check for existing attendance
+    const existingAttendance = await queryRunner.manager
+      .createQueryBuilder()
+      .select('attendance')
+      .from('daily_attendance', 'attendance')
+      .where('attendance.user_id = :userId', { userId })
+      .andWhere('attendance.date = :date', { date })
+      .getOne();
+
+    if (existingAttendance && existingAttendance.clock_in_time) {
+      throw new AttendanceStateException('already_clocked_in', 'remote-clock-in', userId);
+    }
+
+    // Validate coordinates
+    this.validateCoordinates(latitude, longitude);
+
+    // Check if user has approved remote work for this date
+    const hasApprovedRemoteWork = await this.remoteWorkService.hasApprovedRemoteWork(userId, date);
+    if (!hasApprovedRemoteWork) {
+      throw new AttendanceStateException('no_remote_work_approval', 'remote-clock-in', userId);
+    }
+
+    // Analyze for fraud (different patterns for remote work)
+    const fraudAnalysis = await this.fraudDetectionService.analyzeRemoteWorkClockIn(
+      userId,
+      latitude,
+      longitude,
+      remoteLocation,
+    );
+
+    return {
+      isApproved: hasApprovedRemoteWork,
+      fraudAnalysis,
+    };
+  }
+
+  /**
+   * Validate remote work clock-out operation
+   */
+  async validateRemoteWorkClockOut(
+    queryRunner: QueryRunner,
+    attendance: any,
+    userId: string,
+    latitude: number,
+    longitude: number,
+  ): Promise<{
+    fraudAnalysis: any;
+    totalHours: number;
+  }> {
+    if (!attendance.clock_in_time) {
+      throw new AttendanceStateException('not_clocked_in', 'remote-clock-out', userId);
+    }
+
+    if (attendance.clock_out_time) {
+      throw new AttendanceStateException('already_clocked_out', 'remote-clock-out', userId);
+    }
+
+    if (attendance.work_location !== 'REMOTE') {
+      throw new AttendanceStateException('not_remote_work', 'remote-clock-out', userId);
+    }
+
+    // Validate coordinates
+    this.validateCoordinates(latitude, longitude);
+
+    // Analyze remote work patterns for fraud
+    const fraudAnalysis = await this.fraudDetectionService.analyzeRemoteWorkClockOut(
+      attendance.id,
+      latitude,
+      longitude,
+    );
+
+    // Calculate total hours
+    const clockOutTime = new Date();
+    const totalHours = (clockOutTime.getTime() - new Date(attendance.clock_in_time).getTime()) / (1000 * 60 * 60);
+
+    // Validate reasonable work hours (0.5 to 16 hours)
+    if (totalHours < 0.5) {
+      throw new AttendanceStateException('insufficient_work_time', 'remote-clock-out', userId);
+    }
+
+    if (totalHours > 16) {
+      this.logger.warn(`Unusually long remote work day detected for user ${userId}: ${totalHours} hours`);
+    }
+
+    return {
+      fraudAnalysis,
+      totalHours: Math.round(totalHours * 100) / 100,
+    };
   }
 
   /**

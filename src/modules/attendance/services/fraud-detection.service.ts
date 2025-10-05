@@ -19,7 +19,7 @@ export class FraudDetectionService implements FraudDetectionServiceInterface {
   private readonly SUSPICIOUS_SPEED_THRESHOLD = 200; // km/h - impossible for normal travel
   private readonly HIGH_SPEED_THRESHOLD = 100; // km/h - suspicious but possible
   private readonly MEDIUM_SPEED_THRESHOLD = 60; // km/h - worth monitoring
-  
+
   // Pattern analysis thresholds
   private readonly PATTERN_ANALYSIS_DAYS = 30; // Days to look back for pattern analysis
   private readonly SUSPICIOUS_PATTERN_THRESHOLD = 3; // Number of suspicious activities to trigger pattern flag
@@ -30,7 +30,7 @@ export class FraudDetectionService implements FraudDetectionServiceInterface {
     private readonly attendanceRepository: DailyAttendanceRepository,
     private readonly sessionRepository: AttendanceSessionRepository,
     private readonly locationLogRepository: LocationLogRepository,
-  ) {}
+  ) { }
 
   /**
    * Analyze clock-in location for potential fraud
@@ -45,9 +45,9 @@ export class FraudDetectionService implements FraudDetectionServiceInterface {
       // Get yesterday's attendance to check travel from previous clock-out
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
-      
+
       const previousAttendance = await this.attendanceRepository.findByUserIdAndDate(userId, yesterday);
-      
+
       if (!previousAttendance || !previousAttendance.clockOutLatitude || !previousAttendance.clockOutLongitude) {
         // No previous location to compare, consider safe
         return {
@@ -102,7 +102,7 @@ export class FraudDetectionService implements FraudDetectionServiceInterface {
   ): Promise<FraudAnalysisResult> {
     try {
       const attendance = await this.attendanceRepository.findById(attendanceId);
-      
+
       if (!attendance || !attendance.clockInLatitude || !attendance.clockInLongitude || !attendance.clockInTime) {
         return {
           isSuspicious: false,
@@ -155,7 +155,7 @@ export class FraudDetectionService implements FraudDetectionServiceInterface {
   ): Promise<FraudAnalysisResult> {
     try {
       const session = await this.sessionRepository.findById(sessionId);
-      
+
       if (!session || !session.checkInTime) {
         return {
           isSuspicious: false,
@@ -209,7 +209,7 @@ export class FraudDetectionService implements FraudDetectionServiceInterface {
   ): Promise<FraudAnalysisResult> {
     try {
       const previousLog = await this.locationLogRepository.findById(previousLogId);
-      
+
       if (!previousLog || !previousLog.checkOutLatitude || !previousLog.checkOutLongitude || !previousLog.checkOutTime) {
         return {
           isSuspicious: false,
@@ -299,7 +299,8 @@ export class FraudDetectionService implements FraudDetectionServiceInterface {
     occurrences: number;
     riskLevel: 'low' | 'medium' | 'high';
     details: any;
-  }> {5
+  }> {
+    5
     try {
       const endDate = new Date();
       const startDate = new Date();
@@ -319,14 +320,14 @@ export class FraudDetectionService implements FraudDetectionServiceInterface {
 
       // Determine overall pattern risk
       const totalSuspiciousActivities = speedViolations.count + locationPatterns.count + timePatterns.count;
-      
+
       let hasPattern = false;
       let riskLevel: 'low' | 'medium' | 'high' = 'low';
       let patternType = 'none';
 
       if (totalSuspiciousActivities >= this.SUSPICIOUS_PATTERN_THRESHOLD) {
         hasPattern = true;
-        
+
         if (totalSuspiciousActivities >= 10) {
           riskLevel = 'high';
         } else if (totalSuspiciousActivities >= 5) {
@@ -369,6 +370,129 @@ export class FraudDetectionService implements FraudDetectionServiceInterface {
         occurrences: 0,
         riskLevel: 'low',
         details: { error: error.message },
+      };
+    }
+  }
+
+  /**
+   * Analyze remote work clock-in for potential fraud
+   * Different validation rules for remote work vs office work
+   */
+  async analyzeRemoteWorkClockIn(
+    userId: string,
+    latitude: number,
+    longitude: number,
+    remoteLocation: string,
+  ): Promise<FraudAnalysisResult> {
+    try {
+      // Get user's recent remote work patterns
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30); // Last 30 days
+
+      const attendanceHistory = await this.attendanceRepository.findByUserIdAndDateRange(
+        userId,
+        startDate,
+        endDate,
+      );
+
+      const remoteWorkHistory = attendanceHistory.filter(
+        (attendance) => attendance.workLocation === 'REMOTE'
+      );
+
+      // Check for location consistency in remote work
+      const locationConsistency = this.analyzeRemoteLocationConsistency(
+        remoteWorkHistory,
+        latitude,
+        longitude,
+        remoteLocation,
+      );
+
+      // Check for suspicious patterns (e.g., always same exact coordinates)
+      if (locationConsistency.isSuspicious) {
+        return {
+          isSuspicious: true,
+          riskLevel: 'medium',
+          flagReason: locationConsistency.reason,
+          details: {
+            remoteLocation,
+            locationConsistency,
+          },
+        };
+      }
+
+      return {
+        isSuspicious: false,
+        riskLevel: 'low',
+        details: {
+          remoteLocation,
+          locationConsistency,
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Error analyzing remote work clock-in for user ${userId}:`, error);
+      return {
+        isSuspicious: false,
+        riskLevel: 'low',
+      };
+    }
+  }
+
+  /**
+   * Analyze remote work clock-out for potential fraud
+   */
+  async analyzeRemoteWorkClockOut(
+    attendanceId: string,
+    latitude: number,
+    longitude: number,
+  ): Promise<FraudAnalysisResult> {
+    try {
+      const attendance = await this.attendanceRepository.findById(attendanceId);
+
+      if (!attendance || !attendance.clockInLatitude || !attendance.clockInLongitude || !attendance.clockInTime) {
+        return {
+          isSuspicious: false,
+          riskLevel: 'low',
+        };
+      }
+
+      // For remote work, we expect minimal movement during the day
+      const distance = this.geospatialService.calculateDistance(
+        attendance.clockInLatitude,
+        attendance.clockInLongitude,
+        latitude,
+        longitude,
+      );
+
+      // Flag if significant movement during remote work day (>5km)
+      const REMOTE_WORK_MOVEMENT_THRESHOLD = 5000; // 5km in meters
+
+      if (distance > REMOTE_WORK_MOVEMENT_THRESHOLD) {
+        return {
+          isSuspicious: true,
+          riskLevel: 'medium',
+          flagReason: `Significant movement during remote work: ${Math.round(distance)}m (threshold: ${REMOTE_WORK_MOVEMENT_THRESHOLD}m)`,
+          details: {
+            distance: Math.round(distance),
+            threshold: REMOTE_WORK_MOVEMENT_THRESHOLD,
+            workLocation: 'REMOTE',
+          },
+        };
+      }
+
+      return {
+        isSuspicious: false,
+        riskLevel: 'low',
+        details: {
+          distance: Math.round(distance),
+          workLocation: 'REMOTE',
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Error analyzing remote work clock-out for attendance ${attendanceId}:`, error);
+      return {
+        isSuspicious: false,
+        riskLevel: 'low',
       };
     }
   }
@@ -475,12 +599,12 @@ export class FraudDetectionService implements FraudDetectionServiceInterface {
     // Assume reasonable overnight gap (12-16 hours)
     const diffMs = currentClockIn.getTime() - previousClockOut.getTime();
     const diffHours = diffMs / (1000 * 60 * 60);
-    
+
     // If the difference is too small (same day) or too large (multiple days), use default
     if (diffHours < 8 || diffHours > 24) {
       return 12; // Default 12-hour gap
     }
-    
+
     return diffHours;
   }
 
@@ -527,7 +651,7 @@ export class FraudDetectionService implements FraudDetectionServiceInterface {
 
     // Group by approximate location (rounded to reduce precision)
     const locationGroups = new Map<string, any[]>();
-    
+
     locationViolations.forEach((violation) => {
       if (violation.clockInLatitude && violation.clockInLongitude) {
         const locationKey = `${Math.round(violation.clockInLatitude * 1000)},${Math.round(violation.clockInLongitude * 1000)}`;
@@ -550,6 +674,68 @@ export class FraudDetectionService implements FraudDetectionServiceInterface {
         dates: violations.map((v) => v.date),
       })),
       repeatedLocations,
+    };
+  }
+
+  /**
+   * Analyze remote work location consistency
+   */
+  private analyzeRemoteLocationConsistency(
+    remoteWorkHistory: any[],
+    currentLat: number,
+    currentLng: number,
+    remoteLocation: string,
+  ): {
+    isSuspicious: boolean;
+    reason?: string;
+    consistencyScore: number;
+    exactMatchCount: number;
+  } {
+    if (remoteWorkHistory.length === 0) {
+      return {
+        isSuspicious: false,
+        consistencyScore: 0,
+        exactMatchCount: 0,
+      };
+    }
+
+    // Check for exact coordinate matches (suspicious if too many)
+    const exactMatches = remoteWorkHistory.filter(
+      (attendance) =>
+        attendance.clockInLatitude === currentLat &&
+        attendance.clockInLongitude === currentLng
+    );
+
+    const exactMatchCount = exactMatches.length;
+    const exactMatchPercentage = (exactMatchCount / remoteWorkHistory.length) * 100;
+
+    // Flag if more than 80% of remote work is from exact same coordinates
+    if (exactMatchPercentage > 80 && remoteWorkHistory.length >= 5) {
+      return {
+        isSuspicious: true,
+        reason: `${exactMatchPercentage.toFixed(1)}% of remote work from identical coordinates - possible GPS spoofing`,
+        consistencyScore: exactMatchPercentage,
+        exactMatchCount,
+      };
+    }
+
+    // Check for location name consistency
+    const locationNames = remoteWorkHistory
+      .map((attendance) => attendance.remoteLocation)
+      .filter((location) => location);
+
+    const sameLocationCount = locationNames.filter(
+      (location) => location === remoteLocation
+    ).length;
+
+    const locationConsistency = locationNames.length > 0
+      ? (sameLocationCount / locationNames.length) * 100
+      : 0;
+
+    return {
+      isSuspicious: false,
+      consistencyScore: locationConsistency,
+      exactMatchCount,
     };
   }
 
@@ -578,7 +764,7 @@ export class FraudDetectionService implements FraudDetectionServiceInterface {
       const avgTime = clockInTimes.reduce((a, b) => a + b, 0) / clockInTimes.length;
       const variance = clockInTimes.reduce((sum, time) => sum + Math.pow(time - avgTime, 2), 0) / clockInTimes.length;
       const stdDev = Math.sqrt(variance);
-      
+
       // Lower standard deviation = higher consistency (inverted scale 0-100)
       consistencyScore = Math.max(0, 100 - stdDev / 2);
     }

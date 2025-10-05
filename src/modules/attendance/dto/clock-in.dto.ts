@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsNumber, IsOptional, IsString, Max, MaxLength, Min, IsIn } from 'class-validator';
 
 /**
  * Clock-In DTO - Validates employee clock-in requests
@@ -19,4 +19,15 @@ export class ClockInDto {
   @IsString({ message: 'Notes must be a string' })
   @MaxLength(500, { message: 'Notes cannot exceed 500 characters' })
   notes?: string;
+
+  @IsOptional()
+  @IsIn(['OFFICE', 'REMOTE', 'FIELD'], { 
+    message: 'Work location must be one of: OFFICE, REMOTE, FIELD' 
+  })
+  workLocation?: 'OFFICE' | 'REMOTE' | 'FIELD';
+
+  @IsOptional()
+  @IsString({ message: 'Remote location must be a string' })
+  @MaxLength(255, { message: 'Remote location cannot exceed 255 characters' })
+  remoteLocation?: string;
 }

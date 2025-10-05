@@ -1,0 +1,20 @@
+{
+  "id": "7d8c505c-2c4e-489a-b85f-cd15c4f78c8b",
+  "name": "Client Site ABC Corp 1759670700101",
+  "kahaId": "CLIENT-ABC-1759670700101",
+  "address": "Lalitpur Business Center, Lalitpur",
+  "geohash": "tuutme5s",
+  "location": {
+    "type": "Point",
+    "coordinates": [
+      85.3247,
+      27.6588
+    ]
+  },
+  "radiusMeters": 150,
+  "avatarUrl": null,
+  "coverImageUrl": null,
+  "description": "ABC Corporation client office",
+  "createdAt": "2025-10-05T13:24:56.633Z",
+  "updatedAt": "2025-10-05T13:24:56.633Z"
+}

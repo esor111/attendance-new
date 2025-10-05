@@ -3,6 +3,7 @@ import { GeospatialService } from './geospatial.service';
 import { FraudDetectionService } from './fraud-detection.service';
 import { TransactionManagerService } from './transaction-manager.service';
 import { AttendanceValidationService } from './attendance-validation.service';
+import { RemoteWorkService } from './remote-work.service';
 import { DailyAttendanceRepository } from '../repositories/daily-attendance.repository';
 import { AttendanceSessionRepository } from '../repositories/attendance-session.repository';
 import { LocationLogRepository } from '../repositories/location-log.repository';
@@ -31,6 +32,7 @@ export class AttendanceService implements AttendanceServiceInterface {
     private readonly fraudDetectionService: FraudDetectionService,
     private readonly transactionManager: TransactionManagerService,
     private readonly validationService: AttendanceValidationService,
+    private readonly remoteWorkService: RemoteWorkService,
     private readonly attendanceRepository: DailyAttendanceRepository,
     private readonly sessionRepository: AttendanceSessionRepository,
     private readonly locationLogRepository: LocationLogRepository,
@@ -38,9 +40,12 @@ export class AttendanceService implements AttendanceServiceInterface {
   ) {}
 
   /**
-   * Clock-in - Start daily attendance with location validation and transaction management
+   * Remote work clock-in - Start daily attendance for remote work
    */
-  async clockIn(userId: string, dto: ClockInDto): Promise<DailyAttendance> {
+  async remoteWorkClockIn(
+    userId: string, 
+    dto: { latitude: number; longitude: number; remoteLocation: string; notes?: string }
+  ): Promise<DailyAttendance> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -53,6 +58,134 @@ export class AttendanceService implements AttendanceServiceInterface {
           clockInTime: new Date(),
           clockInLatitude: dto.latitude,
           clockInLongitude: dto.longitude,
+          workLocation: 'REMOTE',
+          remoteLocation: dto.remoteLocation,
+          isRemoteApproved: true, // Will be validated
+          notes: dto.notes,
+          status: 'Present',
+        },
+        async (queryRunner) => {
+          // Comprehensive validation within transaction
+          const validation = await this.validationService.validateRemoteWorkClockIn(
+            queryRunner,
+            userId,
+            dto.latitude,
+            dto.longitude,
+            today,
+            dto.remoteLocation,
+          );
+
+          // Update clock-in data with validation results
+          Object.assign(arguments[1], {
+            isRemoteApproved: validation.isApproved,
+            isFlagged: validation.fraudAnalysis.isSuspicious,
+            flagReason: validation.fraudAnalysis.flagReason,
+          });
+        },
+      );
+
+      // Convert raw result to entity
+      const attendance = await this.attendanceRepository.findById(result.id);
+      if (!attendance) {
+        throw new Error('Failed to retrieve created attendance record');
+      }
+
+      return attendance;
+    } catch (error) {
+      if (error.message?.includes('concurrent')) {
+        throw new ConcurrentOperationException(userId, 'remote-clock-in');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Remote work clock-out - End daily attendance for remote work
+   */
+  async remoteWorkClockOut(userId: string, dto: ClockOutDto): Promise<DailyAttendance> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    try {
+      const result = await this.transactionManager.executeClockOut(
+        userId,
+        {
+          date: today,
+          clockOutTime: new Date(),
+          clockOutLatitude: dto.latitude,
+          clockOutLongitude: dto.longitude,
+          notes: dto.notes,
+        },
+        async (queryRunner, attendance) => {
+          // Comprehensive validation within transaction
+          const validation = await this.validationService.validateRemoteWorkClockOut(
+            queryRunner,
+            attendance,
+            userId,
+            dto.latitude,
+            dto.longitude,
+          );
+
+          // Update clock-out data with validation results
+          Object.assign(arguments[1], {
+            totalHours: validation.totalHours,
+            travelSpeedKmph: validation.fraudAnalysis.travelSpeedKmph,
+            isFlagged: attendance.is_flagged || validation.fraudAnalysis.isSuspicious,
+            flagReason: validation.fraudAnalysis.isSuspicious 
+              ? (attendance.flag_reason ? `${attendance.flag_reason}; ${validation.fraudAnalysis.flagReason}` : validation.fraudAnalysis.flagReason)
+              : attendance.flag_reason,
+          });
+        },
+      );
+
+      // Convert raw result to entity
+      const attendance = await this.attendanceRepository.findById(result.id);
+      if (!attendance) {
+        throw new Error('Failed to retrieve updated attendance record');
+      }
+
+      return attendance;
+    } catch (error) {
+      if (error.message?.includes('concurrent')) {
+        throw new ConcurrentOperationException(userId, 'remote-clock-out');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Clock-in - Start daily attendance with location validation and transaction management
+   * Supports office, remote, and field work locations
+   */
+  async clockIn(userId: string, dto: ClockInDto): Promise<DailyAttendance> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Determine work location - default to OFFICE if not specified
+    const workLocation = dto.workLocation || 'OFFICE';
+
+    // For remote work, delegate to remote work method
+    if (workLocation === 'REMOTE') {
+      if (!dto.remoteLocation) {
+        throw new BadRequestException('Remote location is required for remote work');
+      }
+      return await this.remoteWorkClockIn(userId, {
+        ...dto,
+        remoteLocation: dto.remoteLocation,
+      });
+    }
+
+    try {
+      const result = await this.transactionManager.executeClockIn(
+        userId,
+        {
+          id: undefined, // Will be generated
+          date: today,
+          clockInTime: new Date(),
+          clockInLatitude: dto.latitude,
+          clockInLongitude: dto.longitude,
+          workLocation,
+          remoteLocation: dto.remoteLocation,
           notes: dto.notes,
           status: 'Present',
         },

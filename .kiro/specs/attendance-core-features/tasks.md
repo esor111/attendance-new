@@ -113,6 +113,8 @@
 
 
 
+
+
   - Define specific exception classes for attendance, location, and fraud scenarios
   - Implement global exception filter with detailed error responses
   - Add validation for coordinates, entity access, and attendance states

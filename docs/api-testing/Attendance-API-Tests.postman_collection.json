@@ -1,0 +1,923 @@
+{
+  "info": {
+    "name": "Attendance Microservice API Tests",
+    "description": "Complete API testing collection for the Attendance Microservice with proper sequencing and ID capturing",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "departmentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "mainOfficeId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "clientSiteId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "managerId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "officeWorkerId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "fieldWorkerId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "attendanceId1",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionId1",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "locationLogId1",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Phase 1 - Foundation Setup",
+      "item": [
+        {
+          "name": "1. Create Department",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has department ID\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.collectionVariables.set('departmentId', jsonData.id);",
+                  "    console.log('Department ID captured:', jsonData.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Engineering Department\",\n  \"description\": \"Software development team\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/departments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "departments"]
+            }
+          }
+        },
+        {
+          "name": "2. Create Main Office Entity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has entity ID\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.collectionVariables.set('mainOfficeId', jsonData.id);",
+                  "    console.log('Main Office ID captured:', jsonData.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Main Office Kathmandu\",\n  \"kahaId\": \"KTM-MAIN-001\",\n  \"latitude\": 27.7172,\n  \"longitude\": 85.3240,\n  \"radiusMeters\": 100,\n  \"address\": \"Kathmandu Plaza, Kamaladi, Kathmandu\",\n  \"description\": \"Main headquarters building\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/entities",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "entities"]
+            }
+          }
+        },
+        {
+          "name": "3. Create Client Site Entity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has entity ID\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.collectionVariables.set('clientSiteId', jsonData.id);",
+                  "    console.log('Client Site ID captured:', jsonData.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Client Site ABC Corp\",\n  \"kahaId\": \"CLIENT-ABC-001\",\n  \"latitude\": 27.6588,\n  \"longitude\": 85.3247,\n  \"radiusMeters\": 150,\n  \"address\": \"Lalitpur Business Center, Lalitpur\",\n  \"description\": \"ABC Corporation client office\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/entities",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "entities"]
+            }
+          }
+        },
+        {
+          "name": "4a. Create Manager User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has user ID\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.collectionVariables.set('managerId', jsonData.id);",
+                  "    console.log('Manager ID captured:', jsonData.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Manager\",\n  \"phone\": \"+9779812345678\",\n  \"email\": \"john.manager@company.com\",\n  \"address\": \"Kathmandu, Nepal\",\n  \"userId\": \"manager-001\",\n  \"isFieldWorker\": false,\n  \"departmentId\": \"{{departmentId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"]
+            }
+          }
+        },
+        {
+          "name": "4b. Create Office Worker User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has user ID\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.collectionVariables.set('officeWorkerId', jsonData.id);",
+                  "    console.log('Office Worker ID captured:', jsonData.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice Worker\",\n  \"phone\": \"+9779812345679\",\n  \"email\": \"alice.worker@company.com\",\n  \"address\": \"Kathmandu, Nepal\",\n  \"userId\": \"worker-001\",\n  \"isFieldWorker\": false,\n  \"departmentId\": \"{{departmentId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"]
+            }
+          }
+        },
+        {
+          "name": "4c. Create Field Worker User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has user ID\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.collectionVariables.set('fieldWorkerId', jsonData.id);",
+                  "    console.log('Field Worker ID captured:', jsonData.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bob FieldWorker\",\n  \"phone\": \"+9779812345680\",\n  \"email\": \"bob.field@company.com\",\n  \"address\": \"Kathmandu, Nepal\",\n  \"userId\": \"field-001\",\n  \"isFieldWorker\": true,\n  \"departmentId\": \"{{departmentId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 2 - Core Attendance",
+      "item": [
+        {
+          "name": "5. Office Worker Clock-In",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has attendance ID\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.collectionVariables.set('attendanceId1', jsonData.id);",
+                  "    console.log('Attendance ID captured:', jsonData.id);",
+                  "});",
+                  "",
+                  "pm.test(\"Clock-in location is within radius\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.isWithinRadius).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 27.7175,\n  \"longitude\": 85.3245,\n  \"notes\": \"Starting work day\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/clock-in",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "attendance", "clock-in"]
+            }
+          }
+        },
+        {
+          "name": "6. Get Today's Attendance",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Has attendance record\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('clockInTime');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/today",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "attendance", "today"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 3 - Session Management",
+      "item": [
+        {
+          "name": "7. Session Check-In (Break)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has session ID\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.collectionVariables.set('sessionId1', jsonData.id);",
+                  "    console.log('Session ID captured:', jsonData.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 27.7173,\n  \"longitude\": 85.3241,\n  \"sessionType\": \"break\",\n  \"notes\": \"Coffee break\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/session/check-in",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "attendance", "session", "check-in"]
+            }
+          }
+        },
+        {
+          "name": "8. Get Current Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Has active session\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData.sessionType).to.eql('break');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/session/current",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "attendance", "session", "current"]
+            }
+          }
+        },
+        {
+          "name": "9. Session Check-Out",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Session has check-out time\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('checkOutTime');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 27.7174,\n  \"longitude\": 85.3242,\n  \"notes\": \"Break finished\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/session/check-out",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "attendance", "session", "check-out"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 4 - Field Worker Location",
+      "item": [
+        {
+          "name": "10. Location Check-In",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has location log ID\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.collectionVariables.set('locationLogId1', jsonData.id);",
+                  "    console.log('Location Log ID captured:', jsonData.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entityId\": \"{{clientSiteId}}\",\n  \"latitude\": 27.6590,\n  \"longitude\": 85.3250,\n  \"purpose\": \"Client meeting\",\n  \"notes\": \"Meeting with ABC Corp about project requirements\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/location/check-in",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "attendance", "location", "check-in"]
+            }
+          }
+        },
+        {
+          "name": "11. Get Current Location Log",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Has active location log\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData.purpose).to.eql('Client meeting');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/location/current",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "attendance", "location", "current"]
+            }
+          }
+        },
+        {
+          "name": "12. Location Check-Out",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Location has check-out time\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('checkOutTime');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 27.6592,\n  \"longitude\": 85.3252,\n  \"notes\": \"Meeting completed successfully\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/location/check-out",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "attendance", "location", "check-out"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 5 - Queries & Reports",
+      "item": [
+        {
+          "name": "13. Find Nearby Entities",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Returns nearby entities\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/entities/nearby?latitude=27.7172&longitude=85.3240&radius=5000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "entities", "nearby"],
+              "query": [
+                {
+                  "key": "latitude",
+                  "value": "27.7172"
+                },
+                {
+                  "key": "longitude",
+                  "value": "85.3240"
+                },
+                {
+                  "key": "radius",
+                  "value": "5000"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "14. Get Attendance History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Returns attendance history\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/history?startDate=2025-10-01&endDate=2025-10-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "attendance", "history"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-10-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-10-31"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "15. Get Location History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Returns location history\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/location/history?startDate=2025-10-01&endDate=2025-10-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "attendance", "location", "history"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-10-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-10-31"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "16. Get Attendance Analytics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Returns analytics data\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('summary');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/analytics?startDate=2025-10-01&endDate=2025-10-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "attendance", "analytics"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-10-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-10-31"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 6 - Clock-Out",
+      "item": [
+        {
+          "name": "17. Office Worker Clock-Out",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Has clock-out time and total hours\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('clockOutTime');",
+                  "    pm.expect(jsonData).to.have.property('totalHours');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 27.7176,\n  \"longitude\": 85.3244,\n  \"notes\": \"End of work day\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/clock-out",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "attendance", "clock-out"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 7 - Error Testing",
+      "item": [
+        {
+          "name": "18. Clock-In Outside Radius (Should Fail)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 (Bad Request)\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Error message mentions location\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message.toLowerCase()).to.include('location');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 28.2096,\n  \"longitude\": 83.9856,\n  \"notes\": \"Trying to clock in from Pokhara (200km away)\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/clock-in",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "attendance", "clock-in"]
+            }
+          }
+        },
+        {
+          "name": "19. Duplicate Clock-In (Should Fail)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 409 (Conflict)\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test(\"Error message mentions duplicate\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message.toLowerCase()).to.include('already');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 27.7175,\n  \"longitude\": 85.3245,\n  \"notes\": \"Trying to clock in again\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/clock-in",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "attendance", "clock-in"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -20,6 +20,7 @@ const department_module_1 = require("./modules/department/department.module");
 const entity_module_1 = require("./modules/entity/entity.module");
 const attendance_module_1 = require("./modules/attendance/attendance.module");
 const leave_module_1 = require("./modules/leave/leave.module");
+const holiday_module_1 = require("./modules/holiday/holiday.module");
 const database_config_1 = require("./config/database.config");
 const global_exception_filter_1 = require("./common/filters/global-exception.filter");
 const validation_pipe_1 = require("./common/pipes/validation.pipe");
@@ -45,6 +46,7 @@ exports.AppModule = AppModule = __decorate([
             entity_module_1.EntityModule,
             attendance_module_1.AttendanceModule,
             leave_module_1.LeaveModule,
+            holiday_module_1.HolidayModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [

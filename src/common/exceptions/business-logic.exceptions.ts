@@ -107,8 +107,8 @@ export class GeospatialValidationException extends HttpException {
 }
 
 export class AttendanceStateException extends HttpException {
-  constructor(currentState: string, attemptedAction: string, userId: string) {
-    const message = `Cannot ${attemptedAction} in current state: ${currentState}`;
+  constructor(currentState: string, attemptedAction: string, userId: string, customMessage?: string) {
+    const message = customMessage || `Cannot ${attemptedAction} in current state: ${currentState}`;
     super(
       {
         message,
@@ -136,6 +136,9 @@ export class AttendanceStateException extends HttpException {
       suggestions.push('Please clock-in for daily attendance before starting a session');
     } else if (attemptedAction === 'session-check-out' && currentState === 'no_active_session') {
       suggestions.push('No active session found to check out from');
+    } else if (currentState === 'holiday_attendance_not_allowed') {
+      suggestions.push('Attendance operations are not permitted on holidays');
+      suggestions.push('Contact your manager if you need to work on a holiday');
     }
     
     return suggestions;

@@ -170,7 +170,12 @@
   - Add validation for remote work policies, advance notice requirements, and approval limits
   - _Requirements: Remote work functionality_
 
-- [ ] 10. Implement Holiday Management System
+- [x] 10. Implement Holiday Management System
+
+
+
+
+
   - Create Holiday entity with name, date, type (NATIONAL, COMPANY, DEPARTMENT), and recurrence
   - Create HolidayCalendar entity with year, department association, and holiday relationships
   - Implement HolidayService with holiday creation, calendar management, and date checking

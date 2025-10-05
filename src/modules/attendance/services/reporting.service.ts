@@ -7,6 +7,7 @@ import { ReportingStructure } from '../entities/reporting-structure.entity';
 import { DailyAttendance } from '../entities/daily-attendance.entity';
 import { CreateReportingStructureDto } from '../dto/create-reporting-structure.dto';
 import { UpdateReportingStructureDto } from '../dto/update-reporting-structure.dto';
+import { HolidayService } from '../../holiday/services/holiday.service';
 
 /**
  * Reporting Service - Handles team reporting and manager access functionality
@@ -22,6 +23,7 @@ export class ReportingService {
     private readonly attendanceRepository: DailyAttendanceRepository,
     private readonly locationLogRepository: LocationLogRepository,
     private readonly sessionRepository: AttendanceSessionRepository,
+    private readonly holidayService: HolidayService,
   ) {}
 
   /**
@@ -426,5 +428,43 @@ export class ReportingService {
       flaggedDays,
       locationVisits,
     };
+  }
+
+  /**
+   * Calculate working days excluding holidays
+   */
+  private async calculateWorkingDays(startDate: Date, endDate: Date, departmentId?: string): Promise<number> {
+    const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    let workingDays = 0;
+
+    for (let i = 0; i < totalDays; i++) {
+      const currentDate = new Date(startDate);
+      currentDate.setDate(startDate.getDate() + i);
+      
+      // Skip weekends (Saturday = 6, Sunday = 0)
+      const dayOfWeek = currentDate.getDay();
+      if (dayOfWeek === 0 || dayOfWeek === 6) {
+        continue;
+      }
+
+      // Check if it's a holiday
+      const isHoliday = await this.holidayService.isHoliday(currentDate, departmentId);
+      if (!isHoliday) {
+        workingDays++;
+      }
+    }
+
+    return workingDays;
+  }
+
+  /**
+   * Get holidays in a date range for reporting context
+   */
+  async getHolidaysInRange(startDate: Date, endDate: Date, departmentId?: string): Promise<any[]> {
+    return await this.holidayService.getHolidays({
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
+      departmentId,
+    });
   }
 }

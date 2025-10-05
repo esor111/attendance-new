@@ -27,6 +27,7 @@ import { RemoteWorkRequestRepository } from './repositories/remote-work-request.
 import { UserModule } from '../user/user.module';
 import { EntityModule } from '../entity/entity.module';
 import { DepartmentModule } from '../department/department.module';
+import { HolidayModule } from '../holiday/holiday.module';
 // Import entities needed by GeospatialService
 import { User } from '../user/entities/user.entity';
 import { Entity as BusinessEntity } from '../entity/entities/entity.entity';
@@ -54,6 +55,7 @@ import { DepartmentEntityAssignment } from '../department/entities/department-en
     UserModule,
     EntityModule,
     DepartmentModule,
+    HolidayModule,
   ],
   controllers: [AttendanceController, EntityAccessController, ReportingController, RemoteWorkController],
   providers: [

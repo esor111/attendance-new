@@ -9,6 +9,7 @@ import {
 import { FraudDetectionService } from './fraud-detection.service';
 import { GeospatialService } from './geospatial.service';
 import { RemoteWorkService } from './remote-work.service';
+import { HolidayService } from '../../holiday/services/holiday.service';
 
 /**
  * Attendance Validation Service - Comprehensive validation for attendance operations
@@ -23,6 +24,7 @@ export class AttendanceValidationService {
     private readonly fraudDetectionService: FraudDetectionService,
     private readonly geospatialService: GeospatialService,
     private readonly remoteWorkService: RemoteWorkService,
+    private readonly holidayService: HolidayService,
   ) {}
 
   /**
@@ -39,6 +41,9 @@ export class AttendanceValidationService {
     isWithinRadius: boolean;
     fraudAnalysis: any;
   }> {
+    // Check if the date is a holiday
+    await this.validateNotHoliday(userId, date, 'clock-in');
+
     // Check for existing attendance
     const existingAttendance = await queryRunner.manager
       .createQueryBuilder()
@@ -456,6 +461,9 @@ export class AttendanceValidationService {
     isApproved: boolean;
     fraudAnalysis: any;
   }> {
+    // Check if the date is a holiday
+    await this.validateNotHoliday(userId, date, 'remote-clock-in');
+
     // Check for existing attendance
     const existingAttendance = await queryRunner.manager
       .createQueryBuilder()
@@ -573,6 +581,27 @@ export class AttendanceValidationService {
     
     if (!integrityCheck.isValid) {
       throw new ReferentialIntegrityException('user', userId, 'entity', entityId);
+    }
+  }
+
+  /**
+   * Validate that the date is not a holiday
+   */
+  private async validateNotHoliday(userId: string, date: Date, operation: string): Promise<void> {
+    // Get user's department ID for department-specific holiday checking
+    // For now, we'll check without department filtering and let the service handle it
+    const isHoliday = await this.holidayService.isHoliday(date);
+    
+    if (isHoliday) {
+      const holidays = await this.holidayService.getHolidaysByDate(date);
+      const holidayNames = holidays.map(h => h.name).join(', ');
+      
+      throw new AttendanceStateException(
+        'holiday_attendance_not_allowed',
+        operation,
+        userId,
+        `Attendance operations are not allowed on holidays: ${holidayNames}`,
+      );
     }
   }
 }

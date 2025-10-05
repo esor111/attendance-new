@@ -21,7 +21,7 @@ export declare class GeospatialValidationException extends HttpException {
     });
 }
 export declare class AttendanceStateException extends HttpException {
-    constructor(currentState: string, attemptedAction: string, userId: string);
+    constructor(currentState: string, attemptedAction: string, userId: string, customMessage?: string);
     private static getSuggestions;
 }
 export declare class FraudDetectionException extends HttpException {

@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
@@ -9,8 +9,49 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
  * Configures global validation, error handling, and API documentation
  */
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  const logger = new Logger('Bootstrap');
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'log', 'debug', 'verbose']
+  });
+
+  // Enhanced CORS configuration for all origins
+  app.enableCors({
+    origin: true, // Allow all origins
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'Origin',
+      'X-Requested-With',
+      'Access-Control-Request-Method',
+      'Access-Control-Request-Headers'
+    ],
+    credentials: true,
+    optionsSuccessStatus: 200, // For legacy browser support
+    preflightContinue: false,
+  });
+
+  // Additional middleware to handle CORS manually (fallback)
+  app.use((req: any, res: any, next: any) => {
+    // Set CORS headers manually as a fallback
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header(
+      'Access-Control-Allow-Headers',
+      'Origin, X-Requested-With, Content-Type, Accept, Authorization'
+    );
+    res.header(
+      'Access-Control-Allow-Methods',
+      'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD'
+    );
+
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
+
+    next();
+  });
 
   // Global validation pipe with enhanced error messages
   app.useGlobalPipes(
@@ -30,7 +71,7 @@ async function bootstrap() {
             value: error.value,
           };
         });
-        
+
         return {
           message: 'Validation failed',
           errors: formattedErrors,
@@ -43,67 +84,32 @@ async function bootstrap() {
   // Global exception filter for consistent error responses
   app.useGlobalFilters(new GlobalExceptionFilter());
 
-  // CORS configuration for development
-  app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-    credentials: true,
-  });
+  // Set global prefix and versioning
+  app.setGlobalPrefix("kattendance");
+  app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 
   // Swagger/OpenAPI documentation configuration
   const config = new DocumentBuilder()
-    .setTitle('Attendance Microservice API')
-    .setDescription(`
-      The Attendance Microservice provides comprehensive user, department, and entity management
-      with geospatial functionality for location-based attendance tracking.
-      
-      ## Key Features
-      - **Handshake Process**: Automatic data population from external microservices
-      - **Geospatial Operations**: PostGIS-powered location validation and proximity search
-      - **Department Management**: Organizational structure with entity assignments
-      - **Access Control**: Department-based entity access validation
-      
-      ## Authentication
-      JWT authentication is required for protected endpoints (implementation in progress).
-      
-      ## Error Handling
-      All endpoints return consistent error responses with detailed validation messages.
-    `)
-    .setVersion('1.0')
-    .addTag('users', 'User management and profile operations')
-    .addTag('departments', 'Department CRUD and entity assignments')
-    .addTag('entities', 'Business location management with geospatial features')
-    .addTag('handshake', 'External service integration endpoints')
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        name: 'JWT',
-        description: 'Enter JWT token',
-        in: 'header',
-      },
-      'JWT-auth',
-    )
+    .setTitle("KAHA-ATTENDANCE")
+    .setDescription("KAHA Attendance Management API")
+    .setVersion("1.0")
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document, {
-    swaggerOptions: {
-      persistAuthorization: true,
-      tagsSorter: 'alpha',
-      operationsSorter: 'alpha',
-    },
-    customSiteTitle: 'Attendance Microservice API Documentation',
-  });
+  SwaggerModule.setup("kattendance/v1/docs", app, document);
 
-  const port = process.env.PORT || 3000;
-  await app.listen(port);
-  
-  logger.log(`🚀 Application is running on: http://localhost:${port}`);
-  logger.log(`📚 API Documentation available at: http://localhost:${port}/api/docs`);
+  const port = Number(process.env.PORT) || Number(process.env.APP_PORT) || 3001;
+
+  await app.listen(port, '0.0.0.0', () => {
+    console.log(`🚀 Attendance Server running on: http://localhost:${port}`);
+    console.log(`📚 API Docs available at: http://localhost:${port}/kattendance/v1/docs`)
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔓 CORS: All origins allowed`);
+  });
 }
 
 bootstrap().catch((error) => {
-  console.error('Failed to start application:', error);
+  console.error('❌ Failed to start server:', error);
   process.exit(1);
 });

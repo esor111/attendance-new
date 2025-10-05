@@ -54,24 +54,24 @@ async function bootstrap() {
     transform: true
   }));
 
-  app.setGlobalPrefix("hostel/api");
+  app.setGlobalPrefix("kattendance");
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 
   const config = new DocumentBuilder()
-    .setTitle("KAHA-HOSTEL")
-    .setDescription("KAHA Hostel Management API")
+    .setTitle("KAHA-ATTENDANCE")
+    .setDescription("KAHA Attendance Management API")
     .setVersion("1.0")
     .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup("hostel/api/v1/docs", app, document);
+  SwaggerModule.setup("kattendance/v1/docs", app, document);
 
   const port = Number(process.env.PORT) || Number(process.env.APP_PORT) || 3001;
   
   await app.listen(port, '0.0.0.0', () => {
-    console.log(`🚀 Hostel Server running on: http://localhost:${port}`);
-    console.log(`📚 API Docs available at: http://localhost:${port}/hostel/api/v1/docs`);
+    console.log(`🚀 Attendance Server running on: http://localhost:${port}`);
+    console.log(`📚 API Docs available at: http://localhost:${port}/kattendance/v1/docs`)
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔓 CORS: All origins allowed`);
   });

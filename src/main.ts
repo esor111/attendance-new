@@ -71,7 +71,7 @@ async function bootstrap() {
             value: error.value,
           };
         });
-
+        
         return {
           message: 'Validation failed',
           errors: formattedErrors,
@@ -100,7 +100,7 @@ async function bootstrap() {
   SwaggerModule.setup("kattendance/v1/docs", app, document);
 
   const port = Number(process.env.PORT) || Number(process.env.APP_PORT) || 3001;
-
+  
   await app.listen(port, '0.0.0.0', () => {
     console.log(`🚀 Attendance Server running on: http://localhost:${port}`);
     console.log(`📚 API Docs available at: http://localhost:${port}/kattendance/v1/docs`)

@@ -190,20 +190,23 @@
   - Update reporting services to exclude holidays from attendance calculations
   - _Requirements: Holiday management functionality_
 
-- [ ] 11. Implement Missed Attendance Tracking and Correction
-  - Create MissedAttendance entity with user, missed date, type (NO_CLOCK_IN, NO_CLOCK_OUT, BOTH), and approval status
-  - Create AttendanceCorrection entity with original attendance reference, corrected times, reason, and approval workflow
-  - Implement MissedAttendanceService with automatic detection, manual reporting, and approval workflow
-  - Implement AttendanceCorrectionService with correction request handling and approval logic
-  - Add automated daily job to detect missed attendance and create records
-  - Update ReportingService to include missed attendance in team reports and analytics
-  - Create POST /api/attendance/missed/report endpoint for manual missed attendance reporting
-  - Create GET /api/attendance/missed endpoint for user's missed attendance history
-  - Create POST /api/attendance/correction/request endpoint for attendance correction requests
-  - Create POST /api/attendance/missed/approve/:id endpoint for manager approval of missed attendance
-  - Create POST /api/attendance/correction/approve/:id endpoint for manager approval of corrections
-  - Add validation for correction time limits, approval permissions, and business rule compliance
-  - _Requirements: Missed attendance and correction functionality_
+- [x] 11. Implement Attendance Request System
+
+
+
+
+
+  - Create AttendanceRequest entity with user, requested date, reason, approval status, and created attendance reference
+  - Implement AttendanceRequestService with request creation, approval workflow, and attendance record generation
+  - Create AttendanceRequestRepository for data access operations and specialized queries
+  - Add validation for request time limits, duplicate requests, and business rule compliance
+  - Create POST /api/attendance/request endpoint for employees to request attendance creation
+  - Create GET /api/attendance/requests endpoint for user's attendance request history
+  - Create GET /api/attendance/requests/pending endpoint for manager's pending approval queue
+  - Create POST /api/attendance/requests/approve/:id endpoint for manager approval of attendance requests
+  - Update ReportingService to include attendance request statistics in team reports
+  - Add business logic to create new DailyAttendance record upon request approval
+  - _Requirements: Simple attendance request and approval functionality_
 
 - [ ] 12. Implement Shift Management System
   - Create ShiftTemplate entity with name, start/end times, break duration, and active status

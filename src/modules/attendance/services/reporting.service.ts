@@ -3,6 +3,7 @@ import { ReportingStructureRepository } from '../repositories/reporting-structur
 import { DailyAttendanceRepository } from '../repositories/daily-attendance.repository';
 import { LocationLogRepository } from '../repositories/location-log.repository';
 import { AttendanceSessionRepository } from '../repositories/attendance-session.repository';
+import { AttendanceRequestRepository } from '../repositories/attendance-request.repository';
 import { ReportingStructure } from '../entities/reporting-structure.entity';
 import { DailyAttendance } from '../entities/daily-attendance.entity';
 import { CreateReportingStructureDto } from '../dto/create-reporting-structure.dto';
@@ -23,6 +24,7 @@ export class ReportingService {
     private readonly attendanceRepository: DailyAttendanceRepository,
     private readonly locationLogRepository: LocationLogRepository,
     private readonly sessionRepository: AttendanceSessionRepository,
+    private readonly attendanceRequestRepository: AttendanceRequestRepository,
     private readonly holidayService: HolidayService,
   ) {}
 
@@ -115,7 +117,7 @@ export class ReportingService {
   }
 
   /**
-   * Get team attendance summary with statistics
+   * Get team attendance summary with statistics including attendance requests
    */
   async getTeamAttendanceSummary(
     managerId: string,
@@ -139,6 +141,13 @@ export class ReportingService {
       flaggedDays: number;
       averageHours: number;
     }>;
+    attendanceRequests: {
+      total: number;
+      pending: number;
+      approved: number;
+      rejected: number;
+      approvalRate: number;
+    };
   }> {
     const teamMemberIds = await this.reportingStructureRepository.getTeamMemberIds(managerId);
 
@@ -153,6 +162,13 @@ export class ReportingService {
           flaggedDays: 0,
         },
         teamMemberStats: [],
+        attendanceRequests: {
+          total: 0,
+          pending: 0,
+          approved: 0,
+          rejected: 0,
+          approvalRate: 0,
+        },
       };
     }
 
@@ -173,10 +189,25 @@ export class ReportingService {
     // Calculate individual team member statistics
     const teamMemberStats = await this.calculateIndividualStats(teamMemberIds, startDate, endDate);
 
+    // Get attendance request statistics for the team
+    const attendanceRequestStats = await this.attendanceRequestRepository.getRequestStats(
+      startDate,
+      endDate,
+      managerId,
+    );
+
+    const approvalRate = attendanceRequestStats.total > 0 
+      ? Math.round((attendanceRequestStats.approved / (attendanceRequestStats.approved + attendanceRequestStats.rejected)) * 100) || 0
+      : 0;
+
     return {
       teamMembers: attendanceRecords,
       statistics,
       teamMemberStats,
+      attendanceRequests: {
+        ...attendanceRequestStats,
+        approvalRate,
+      },
     };
   }
 

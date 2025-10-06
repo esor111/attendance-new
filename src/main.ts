@@ -1,83 +1,31 @@
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { ValidationPipe, VersioningType } from "@nestjs/common";
+
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug', 'verbose']
-  });
+  const app = await NestFactory.create(AppModule);
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 
-  // Enhanced CORS configuration for all origins
-  app.enableCors({
-    origin: true, // Allow all origins
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'Accept',
-      'Origin',
-      'X-Requested-With',
-      'Access-Control-Request-Method',
-      'Access-Control-Request-Headers'
-    ],
-    credentials: true,
-    optionsSuccessStatus: 200, // For legacy browser support
-    preflightContinue: false,
-  });
-
-  // Additional middleware to handle CORS manually (fallback)
-  app.use((req, res, next) => {
-    // Set CORS headers manually as a fallback
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header(
-      'Access-Control-Allow-Headers',
-      'Origin, X-Requested-With, Content-Type, Accept, Authorization'
-    );
-    res.header(
-      'Access-Control-Allow-Methods',
-      'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD'
-    );
-
-    // Handle preflight requests
-    if (req.method === 'OPTIONS') {
-      return res.status(200).end();
-    }
-
-    next();
-  });
-
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true
-  }));
-
-  app.setGlobalPrefix("kattendance");
+  
+  app.setGlobalPrefix("kattendance/api");
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
+
 
   const config = new DocumentBuilder()
     .setTitle("KAHA-ATTENDANCE")
-    .setDescription("KAHA Attendance Management API")
+    .setDescription("KAHA")
     .setVersion("1.0")
     .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup("kattendance/v1/docs", app, document);
+  SwaggerModule.setup("kattendance/api/v1/docs", app, document);
 
-  const port = Number(process.env.PORT) || Number(process.env.APP_PORT) || 3012;
-
-  await app.listen(port, '0.0.0.0', () => {
-    console.log(`🚀 Attendance Server running on: http://localhost:${port}`);
-    console.log(`📚 API Docs available at: http://localhost:${port}/kattendance/v1/docs`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔓 CORS: All origins allowed`);
+  await app.listen(3013, () => {
+    console.log(`Attendance Server: http://localhost:3013`);
+    console.log(`Docs: http://localhost:3013/kattendance/api/v1/docs`);
   });
 }
-
-bootstrap().catch((error) => {
-  console.error('❌ Failed to start server:', error);
-  process.exit(1);
-});
+bootstrap();

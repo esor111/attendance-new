@@ -67,7 +67,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup("kattendance/v1/docs", app, document);
 
-  const port = Number(process.env.PORT) || Number(process.env.APP_PORT) || 3001;
+  const port = Number(process.env.PORT) || Number(process.env.APP_PORT) || 3012;
 
   await app.listen(port, '0.0.0.0', () => {
     console.log(`🚀 Attendance Server running on: http://localhost:${port}`);

@@ -225,20 +225,22 @@
   - Add validation for shift conflicts, assignment overlaps, and swap eligibility rules
   - _Requirements: Shift management functionality_
 
-- [ ] 13. Implement Department Schedule Management
-  - Create DepartmentSchedule entity with department, name, weekly schedule JSON, and effective dates
-  - Create ScheduleException entity with department, exception date, type, and modified hours
-  - Implement DepartmentScheduleService with schedule creation, exception handling, and validation
-  - Update AttendanceService to validate attendance against department schedules and exceptions
-  - Extend ReportingService to include schedule-based analytics and compliance reports
-  - Create POST /api/schedules/department endpoint for department schedule creation
-  - Create GET /api/schedules/department/:departmentId endpoint for department schedule retrieval
-  - Create POST /api/schedules/exceptions endpoint for schedule exception creation
-  - Create GET /api/schedules/exceptions endpoint for schedule exceptions with date filtering
-  - Create PUT /api/schedules/department/:id endpoint for schedule updates
-  - Add validation for schedule conflicts, department permissions, and exception logic
-  - Update existing attendance validation to respect department-specific working hours
-  - _Requirements: Department schedule functionality_
+- [x] 13. Implement Simple Department Schedule Management
+
+
+
+
+  - Create DepartmentSchedule entity with department, name, start/end times, work days, and active status
+  - Implement DepartmentScheduleService with basic schedule creation, retrieval, and updates
+  - Update AttendanceService to validate clock-in/out times against department working hours
+  - Extend ReportingService to include basic schedule compliance metrics in team reports
+  - Create POST /api/departments/:id/schedule endpoint for creating department schedules
+  - Create GET /api/departments/:id/schedule endpoint for retrieving department schedules
+  - Create PUT /api/departments/:id/schedule endpoint for updating department schedules
+  - Create GET /api/attendance/my-schedule endpoint for users to view their department schedule
+  - Add simple validation to flag attendance outside department working hours
+  - Update DepartmentModule to include schedule management components
+  - _Requirements: Simple department-level working hours management (e.g., Marketing: 10-5 Sun-Fri, Tech: 9-6 Mon-Fri)_
 
 - [ ] 14. Integrate and Test All New Features
   - Update existing attendance validation to work with leaves, holidays, shifts, and schedules

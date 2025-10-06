@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
+import { UserRepository } from './repositories/user.repository';
 import { User } from './entities/user.entity';
 import { ServiceCommunicationModule } from '../../service-communication/service-communication.module';
 import { DepartmentModule } from '../department/department.module';
@@ -17,7 +18,7 @@ import { DepartmentModule } from '../department/department.module';
     DepartmentModule, // Import to access DepartmentService
   ],
   controllers: [UserController],
-  providers: [UserService],
-  exports: [UserService], // Export for use in other modules
+  providers: [UserService, UserRepository],
+  exports: [UserService, UserRepository], // Export for use in other modules
 })
 export class UserModule {}

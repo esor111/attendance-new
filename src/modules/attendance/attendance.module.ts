@@ -5,6 +5,7 @@ import { EntityAccessController } from './controllers/entity-access.controller';
 import { ReportingController } from './controllers/reporting.controller';
 import { RemoteWorkController } from './controllers/remote-work.controller';
 import { AttendanceRequestController } from './controllers/attendance-request.controller';
+import { UserScheduleController } from './controllers/user-schedule.controller';
 import { AttendanceService } from './services/attendance.service';
 import { GeospatialService } from './services/geospatial.service';
 import { FraudDetectionService } from './services/fraud-detection.service';
@@ -62,7 +63,7 @@ import { DepartmentEntityAssignment } from '../department/entities/department-en
     DepartmentModule,
     HolidayModule,
   ],
-  controllers: [AttendanceController, EntityAccessController, ReportingController, RemoteWorkController, AttendanceRequestController],
+  controllers: [AttendanceController, EntityAccessController, ReportingController, RemoteWorkController, AttendanceRequestController, UserScheduleController],
   providers: [
     AttendanceService,
     GeospatialService,

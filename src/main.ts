@@ -1,19 +1,8 @@
-// Crypto polyfill for Node.js compatibility
-import { randomUUID } from 'crypto';
-if (!globalThis.crypto) {
-  globalThis.crypto = { randomUUID } as any;
-}
+import { NestFactory } from "@nestjs/core";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { ValidationPipe, VersioningType } from "@nestjs/common";
+import { AppModule } from "./app.module";
 
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, VersioningType } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { AppModule } from './app.module';
-import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
-
-/**
- * Bootstrap the Attendance Microservice application
- * Configures global validation, error handling, and API documentation
- */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose']
@@ -38,7 +27,7 @@ async function bootstrap() {
   });
 
   // Additional middleware to handle CORS manually (fallback)
-  app.use((req: any, res: any, next: any) => {
+  app.use((req, res, next) => {
     // Set CORS headers manually as a fallback
     res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.header('Access-Control-Allow-Credentials', 'true');
@@ -59,42 +48,15 @@ async function bootstrap() {
     next();
   });
 
-  // Global validation pipe with enhanced error messages
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true, // Strip properties that don't have decorators
-      forbidNonWhitelisted: true, // Throw error for non-whitelisted properties
-      transform: true, // Transform the object to the target type
-      transformOptions: {
-        enableImplicitConversion: true, // Enable implicit type conversion
-      },
-      exceptionFactory: (errors) => {
-        const formattedErrors = errors.map(error => {
-          const constraints = error.constraints || {};
-          return {
-            field: error.property,
-            message: Object.values(constraints)[0] || 'Validation failed',
-            value: error.value,
-          };
-        });
-        
-        return {
-          message: 'Validation failed',
-          errors: formattedErrors,
-          statusCode: 400,
-        };
-      },
-    }),
-  );
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true
+  }));
 
-  // Global exception filter for consistent error responses
-  app.useGlobalFilters(new GlobalExceptionFilter());
-
-  // Set global prefix and versioning
   app.setGlobalPrefix("kattendance");
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 
-  // Swagger/OpenAPI documentation configuration
   const config = new DocumentBuilder()
     .setTitle("KAHA-ATTENDANCE")
     .setDescription("KAHA Attendance Management API")
@@ -106,10 +68,10 @@ async function bootstrap() {
   SwaggerModule.setup("kattendance/v1/docs", app, document);
 
   const port = Number(process.env.PORT) || Number(process.env.APP_PORT) || 3001;
-  
+
   await app.listen(port, '0.0.0.0', () => {
     console.log(`🚀 Attendance Server running on: http://localhost:${port}`);
-    console.log(`📚 API Docs available at: http://localhost:${port}/kattendance/v1/docs`)
+    console.log(`📚 API Docs available at: http://localhost:${port}/kattendance/v1/docs`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔓 CORS: All origins allowed`);
   });

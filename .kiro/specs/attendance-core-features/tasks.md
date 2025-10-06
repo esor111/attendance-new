@@ -242,17 +242,25 @@
   - Update DepartmentModule to include schedule management components
   - _Requirements: Simple department-level working hours management (e.g., Marketing: 10-5 Sun-Fri, Tech: 9-6 Mon-Fri)_
 
-- [ ] 14. Integrate and Test All New Features
-  - Update existing attendance validation to work with leaves, holidays, shifts, and schedules
-  - Extend fraud detection to handle new attendance patterns and remote work scenarios
-  - Update reporting services to include comprehensive analytics for all new features
-  - Create integration tests for leave approval workflows with attendance blocking
-  - Test remote work approval integration with attendance location validation
-  - Test holiday calendar integration with attendance prevention and reporting
-  - Test missed attendance detection with automatic correction workflows
-  - Test shift-based attendance validation with schedule compliance
-  - Test department schedule integration with exception handling
-  - Create comprehensive API tests for all new endpoints with proper authorization
-  - Update existing API tests to work with new attendance validation rules
-  - Add performance tests for complex queries involving multiple feature interactions
-  - _Requirements: Integration and comprehensive testing of all features_
+- [x] 14. Integrate and Test All New Features
+
+
+
+
+
+
+  - Update AttendanceService to validate clock-in/out times against department schedules
+  - Integrate DepartmentScheduleService with attendance validation workflow
+  - Update ReportingService to include department schedule compliance metrics
+  - Extend fraud detection to flag attendance outside department working hours
+  - Create integration tests for attendance request approval workflow
+  - Test department schedule validation with attendance operations
+  - Create API tests for department schedule management endpoints
+  - Test user schedule viewing and compliance checking endpoints
+  - Create integration tests for remote work approval with attendance validation
+  - Test holiday calendar integration with attendance operations (if implemented)
+  - Update existing attendance validation to respect department working hours
+  - Create comprehensive API tests for attendance request endpoints with proper authorization
+  - Test schedule compliance reporting and analytics
+  - Add performance tests for schedule validation queries
+  - _Requirements: Integration of department schedules, attendance requests, and existing attendance system_

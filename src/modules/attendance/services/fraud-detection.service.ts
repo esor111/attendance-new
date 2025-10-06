@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { GeospatialService } from './geospatial.service';
+import { DepartmentScheduleService } from '../../department/services/department-schedule.service';
+import { UserRepository } from '../../user/repositories/user.repository';
 import { DailyAttendanceRepository } from '../repositories/daily-attendance.repository';
 import { AttendanceSessionRepository } from '../repositories/attendance-session.repository';
 import { LocationLogRepository } from '../repositories/location-log.repository';
@@ -27,6 +29,8 @@ export class FraudDetectionService implements FraudDetectionServiceInterface {
 
   constructor(
     private readonly geospatialService: GeospatialService,
+    private readonly departmentScheduleService: DepartmentScheduleService,
+    private readonly userRepository: UserRepository,
     private readonly attendanceRepository: DailyAttendanceRepository,
     private readonly sessionRepository: AttendanceSessionRepository,
     private readonly locationLogRepository: LocationLogRepository,
@@ -779,5 +783,54 @@ export class FraudDetectionService implements FraudDetectionServiceInterface {
       })),
       consistencyScore: Math.round(consistencyScore),
     };
+  }
+
+  /**
+   * Check if attendance time is outside department working hours
+   */
+  async checkDepartmentScheduleCompliance(
+    userId: string,
+    time: Date,
+  ): Promise<{
+    isCompliant: boolean;
+    flagReason?: string;
+    schedule?: any;
+  }> {
+    try {
+      // Get user's department
+      const user = await this.userRepository.findById(userId);
+      if (!user || !user.departmentId) {
+        // No department means no schedule restrictions
+        return { isCompliant: true };
+      }
+
+      // Validate against department schedule
+      const validation = await this.departmentScheduleService.validateAttendanceTime(
+        user.departmentId,
+        time,
+      );
+
+      if (!validation.isValid && validation.compliance) {
+        const flagReason = `Outside department working hours: ${validation.compliance.isWorkDay
+          ? `outside hours (${validation.schedule?.startTime}-${validation.schedule?.endTime})`
+          : 'non-work day'
+          }`;
+
+        return {
+          isCompliant: false,
+          flagReason,
+          schedule: validation.schedule,
+        };
+      }
+
+      return {
+        isCompliant: true,
+        schedule: validation.schedule,
+      };
+    } catch (error) {
+      this.logger.error(`Error checking department schedule compliance for user ${userId}:`, error);
+      // If schedule validation fails, don't flag as non-compliant
+      return { isCompliant: true };
+    }
   }
 }

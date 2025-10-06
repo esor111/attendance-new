@@ -4,6 +4,8 @@ import { DailyAttendanceRepository } from '../repositories/daily-attendance.repo
 import { LocationLogRepository } from '../repositories/location-log.repository';
 import { AttendanceSessionRepository } from '../repositories/attendance-session.repository';
 import { AttendanceRequestRepository } from '../repositories/attendance-request.repository';
+import { DepartmentScheduleService } from '../../department/services/department-schedule.service';
+import { UserRepository } from '../../user/repositories/user.repository';
 import { ReportingStructure } from '../entities/reporting-structure.entity';
 import { DailyAttendance } from '../entities/daily-attendance.entity';
 import { CreateReportingStructureDto } from '../dto/create-reporting-structure.dto';
@@ -25,6 +27,8 @@ export class ReportingService {
     private readonly locationLogRepository: LocationLogRepository,
     private readonly sessionRepository: AttendanceSessionRepository,
     private readonly attendanceRequestRepository: AttendanceRequestRepository,
+    private readonly departmentScheduleService: DepartmentScheduleService,
+    private readonly userRepository: UserRepository,
     private readonly holidayService: HolidayService,
   ) {}
 
@@ -117,7 +121,7 @@ export class ReportingService {
   }
 
   /**
-   * Get team attendance summary with statistics including attendance requests
+   * Get team attendance summary with statistics including attendance requests and schedule compliance
    */
   async getTeamAttendanceSummary(
     managerId: string,
@@ -140,6 +144,11 @@ export class ReportingService {
       lateDays: number;
       flaggedDays: number;
       averageHours: number;
+      scheduleCompliance: {
+        compliantDays: number;
+        nonCompliantDays: number;
+        complianceRate: number;
+      };
     }>;
     attendanceRequests: {
       total: number;
@@ -147,6 +156,11 @@ export class ReportingService {
       approved: number;
       rejected: number;
       approvalRate: number;
+    };
+    scheduleCompliance: {
+      totalCompliantDays: number;
+      totalNonCompliantDays: number;
+      overallComplianceRate: number;
     };
   }> {
     const teamMemberIds = await this.reportingStructureRepository.getTeamMemberIds(managerId);
@@ -169,6 +183,11 @@ export class ReportingService {
           rejected: 0,
           approvalRate: 0,
         },
+        scheduleCompliance: {
+          totalCompliantDays: 0,
+          totalNonCompliantDays: 0,
+          overallComplianceRate: 0,
+        },
       };
     }
 
@@ -186,8 +205,8 @@ export class ReportingService {
       endDate,
     );
 
-    // Calculate individual team member statistics
-    const teamMemberStats = await this.calculateIndividualStats(teamMemberIds, startDate, endDate);
+    // Calculate individual team member statistics with schedule compliance
+    const teamMemberStats = await this.calculateIndividualStatsWithCompliance(teamMemberIds, startDate, endDate);
 
     // Get attendance request statistics for the team
     const attendanceRequestStats = await this.attendanceRequestRepository.getRequestStats(
@@ -200,6 +219,13 @@ export class ReportingService {
       ? Math.round((attendanceRequestStats.approved / (attendanceRequestStats.approved + attendanceRequestStats.rejected)) * 100) || 0
       : 0;
 
+    // Calculate overall schedule compliance
+    const totalCompliantDays = teamMemberStats.reduce((sum, member) => sum + member.scheduleCompliance.compliantDays, 0);
+    const totalNonCompliantDays = teamMemberStats.reduce((sum, member) => sum + member.scheduleCompliance.nonCompliantDays, 0);
+    const overallComplianceRate = (totalCompliantDays + totalNonCompliantDays) > 0 
+      ? Math.round((totalCompliantDays / (totalCompliantDays + totalNonCompliantDays)) * 100)
+      : 100;
+
     return {
       teamMembers: attendanceRecords,
       statistics,
@@ -207,6 +233,11 @@ export class ReportingService {
       attendanceRequests: {
         ...attendanceRequestStats,
         approvalRate,
+      },
+      scheduleCompliance: {
+        totalCompliantDays,
+        totalNonCompliantDays,
+        overallComplianceRate,
       },
     };
   }
@@ -426,6 +457,161 @@ export class ReportingService {
     }
 
     return stats;
+  }
+
+  /**
+   * Calculate individual team member statistics with schedule compliance
+   */
+  private async calculateIndividualStatsWithCompliance(
+    userIds: string[],
+    startDate: Date,
+    endDate: Date,
+  ): Promise<Array<{
+    userId: string;
+    userName: string;
+    presentDays: number;
+    absentDays: number;
+    lateDays: number;
+    flaggedDays: number;
+    averageHours: number;
+    scheduleCompliance: {
+      compliantDays: number;
+      nonCompliantDays: number;
+      complianceRate: number;
+    };
+  }>> {
+    const stats: Array<{
+      userId: string;
+      userName: string;
+      presentDays: number;
+      absentDays: number;
+      lateDays: number;
+      flaggedDays: number;
+      averageHours: number;
+      scheduleCompliance: {
+        compliantDays: number;
+        nonCompliantDays: number;
+        complianceRate: number;
+      };
+    }> = [];
+
+    for (const userId of userIds) {
+      const userAttendance = await this.attendanceRepository.findByUserIdAndDateRange(
+        userId,
+        startDate,
+        endDate,
+      );
+
+      const presentDays = userAttendance.filter(a => a.clockInTime).length;
+      const absentDays = userAttendance.filter(a => !a.clockInTime).length;
+      const lateDays = userAttendance.filter(a => a.status === 'Late').length;
+      const flaggedDays = userAttendance.filter(a => a.isFlagged).length;
+      
+      const totalHours = userAttendance
+        .filter(a => a.totalHours)
+        .reduce((sum, a) => sum + (a.totalHours || 0), 0);
+      
+      const averageHours = presentDays > 0 ? totalHours / presentDays : 0;
+
+      // Calculate schedule compliance
+      const scheduleCompliance = await this.calculateScheduleCompliance(userId, userAttendance);
+
+      stats.push({
+        userId,
+        userName: userAttendance[0]?.user?.name || 'Unknown',
+        presentDays,
+        absentDays,
+        lateDays,
+        flaggedDays,
+        averageHours: Math.round(averageHours * 100) / 100,
+        scheduleCompliance,
+      });
+    }
+
+    return stats;
+  }
+
+  /**
+   * Calculate schedule compliance for a user's attendance records
+   */
+  private async calculateScheduleCompliance(
+    userId: string,
+    attendanceRecords: DailyAttendance[],
+  ): Promise<{
+    compliantDays: number;
+    nonCompliantDays: number;
+    complianceRate: number;
+  }> {
+    try {
+      // Get user's department
+      const user = await this.userRepository.findById(userId);
+      if (!user || !user.departmentId) {
+        // No department means no schedule restrictions - all days are compliant
+        return {
+          compliantDays: attendanceRecords.length,
+          nonCompliantDays: 0,
+          complianceRate: 100,
+        };
+      }
+
+      let compliantDays = 0;
+      let nonCompliantDays = 0;
+
+      for (const attendance of attendanceRecords) {
+        // Check clock-in compliance
+        let isCompliant = true;
+        
+        if (attendance.clockInTime) {
+          const clockInValidation = await this.departmentScheduleService.validateAttendanceTime(
+            user.departmentId,
+            attendance.clockInTime,
+          );
+          if (!clockInValidation.isValid) {
+            isCompliant = false;
+          }
+        }
+
+        // Check clock-out compliance if available
+        if (isCompliant && attendance.clockOutTime) {
+          const clockOutValidation = await this.departmentScheduleService.validateAttendanceTime(
+            user.departmentId,
+            attendance.clockOutTime,
+          );
+          if (!clockOutValidation.isValid) {
+            isCompliant = false;
+          }
+        }
+
+        // Also check if flagged for schedule violations
+        if (isCompliant && attendance.isFlagged && attendance.flagReason?.includes('department working hours')) {
+          isCompliant = false;
+        }
+
+        if (isCompliant) {
+          compliantDays++;
+        } else {
+          nonCompliantDays++;
+        }
+      }
+
+      const complianceRate = (compliantDays + nonCompliantDays) > 0 
+        ? Math.round((compliantDays / (compliantDays + nonCompliantDays)) * 100)
+        : 100;
+
+      return {
+        compliantDays,
+        nonCompliantDays,
+        complianceRate,
+      };
+    } catch (error) {
+      this.logger.error(`Error calculating schedule compliance for user ${userId}:`, error);
+      // If calculation fails, assume all days are compliant
+      return {
+        compliantDays: attendanceRecords.length,
+        nonCompliantDays: 0,
+        complianceRate: 100,
+      };
+    }
   }
 
   /**

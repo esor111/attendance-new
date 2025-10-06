@@ -4,10 +4,12 @@ import { FraudDetectionService } from './fraud-detection.service';
 import { TransactionManagerService } from './transaction-manager.service';
 import { AttendanceValidationService } from './attendance-validation.service';
 import { RemoteWorkService } from './remote-work.service';
+import { DepartmentScheduleService } from '../../department/services/department-schedule.service';
 import { DailyAttendanceRepository } from '../repositories/daily-attendance.repository';
 import { AttendanceSessionRepository } from '../repositories/attendance-session.repository';
 import { LocationLogRepository } from '../repositories/location-log.repository';
 import { ReportingStructureRepository } from '../repositories/reporting-structure.repository';
+import { UserRepository } from '../../user/repositories/user.repository';
 import { DailyAttendance } from '../entities/daily-attendance.entity';
 import { AttendanceSession } from '../entities/attendance-session.entity';
 import { LocationLog } from '../entities/location-log.entity';
@@ -33,10 +35,12 @@ export class AttendanceService implements AttendanceServiceInterface {
     private readonly transactionManager: TransactionManagerService,
     private readonly validationService: AttendanceValidationService,
     private readonly remoteWorkService: RemoteWorkService,
+    private readonly departmentScheduleService: DepartmentScheduleService,
     private readonly attendanceRepository: DailyAttendanceRepository,
     private readonly sessionRepository: AttendanceSessionRepository,
     private readonly locationLogRepository: LocationLogRepository,
     private readonly reportingStructureRepository: ReportingStructureRepository,
+    private readonly userRepository: UserRepository,
   ) {}
 
   /**
@@ -160,6 +164,7 @@ export class AttendanceService implements AttendanceServiceInterface {
   async clockIn(userId: string, dto: ClockInDto): Promise<DailyAttendance> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const clockInTime = new Date();
 
     // Determine work location - default to OFFICE if not specified
     const workLocation = dto.workLocation || 'OFFICE';
@@ -175,13 +180,16 @@ export class AttendanceService implements AttendanceServiceInterface {
       });
     }
 
+    // Validate against department schedule
+    const scheduleValidation = await this.validateDepartmentSchedule(userId, clockInTime);
+
     try {
       const result = await this.transactionManager.executeClockIn(
         userId,
         {
           id: undefined, // Will be generated
           date: today,
-          clockInTime: new Date(),
+          clockInTime,
           clockInLatitude: dto.latitude,
           clockInLongitude: dto.longitude,
           workLocation,
@@ -199,12 +207,24 @@ export class AttendanceService implements AttendanceServiceInterface {
             today,
           );
 
+          // Combine fraud analysis with schedule validation
+          let isFlagged = validation.fraudAnalysis.isSuspicious;
+          let flagReason = validation.fraudAnalysis.flagReason;
+
+          // Add schedule compliance flag if outside working hours
+          if (!scheduleValidation.isValid && scheduleValidation.flagReason) {
+            isFlagged = true;
+            flagReason = flagReason 
+              ? `${flagReason}; ${scheduleValidation.flagReason}`
+              : scheduleValidation.flagReason;
+          }
+
           // Update clock-in data with validation results
           Object.assign(arguments[1], {
             entityId: validation.entityId,
             isWithinRadius: validation.isWithinRadius,
-            isFlagged: validation.fraudAnalysis.isSuspicious,
-            flagReason: validation.fraudAnalysis.flagReason,
+            isFlagged,
+            flagReason,
           });
         },
       );
@@ -230,13 +250,17 @@ export class AttendanceService implements AttendanceServiceInterface {
   async clockOut(userId: string, dto: ClockOutDto): Promise<DailyAttendance> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const clockOutTime = new Date();
+
+    // Validate against department schedule
+    const scheduleValidation = await this.validateDepartmentSchedule(userId, clockOutTime);
 
     try {
       const result = await this.transactionManager.executeClockOut(
         userId,
         {
           date: today,
-          clockOutTime: new Date(),
+          clockOutTime,
           clockOutLatitude: dto.latitude,
           clockOutLongitude: dto.longitude,
           notes: dto.notes,
@@ -251,14 +275,26 @@ export class AttendanceService implements AttendanceServiceInterface {
             dto.longitude,
           );
 
+          // Combine fraud analysis with schedule validation
+          let isFlagged = attendance.is_flagged || validation.fraudAnalysis.isSuspicious;
+          let flagReason = validation.fraudAnalysis.isSuspicious 
+            ? (attendance.flag_reason ? `${attendance.flag_reason}; ${validation.fraudAnalysis.flagReason}` : validation.fraudAnalysis.flagReason)
+            : attendance.flag_reason;
+
+          // Add schedule compliance flag if outside working hours
+          if (!scheduleValidation.isValid && scheduleValidation.flagReason) {
+            isFlagged = true;
+            flagReason = flagReason 
+              ? `${flagReason}; ${scheduleValidation.flagReason}`
+              : scheduleValidation.flagReason;
+          }
+
           // Update clock-out data with validation results
           Object.assign(arguments[1], {
             totalHours: validation.totalHours,
             travelSpeedKmph: validation.fraudAnalysis.travelSpeedKmph,
-            isFlagged: attendance.is_flagged || validation.fraudAnalysis.isSuspicious,
-            flagReason: validation.fraudAnalysis.isSuspicious 
-              ? (attendance.flag_reason ? `${attendance.flag_reason}; ${validation.fraudAnalysis.flagReason}` : validation.fraudAnalysis.flagReason)
-              : attendance.flag_reason,
+            isFlagged,
+            flagReason,
           });
         },
       );
@@ -792,5 +828,52 @@ export class AttendanceService implements AttendanceServiceInterface {
 
     const mostCommonCount = Math.max(...Object.values(entityCounts));
     return (mostCommonCount / records.length) * 100;
+  }
+
+  /**
+   * Validate attendance time against department schedule
+   */
+  private async validateDepartmentSchedule(userId: string, time: Date): Promise<{
+    isValid: boolean;
+    compliance?: any;
+    schedule?: any;
+    flagReason?: string;
+  }> {
+    try {
+      // Get user's department
+      const user = await this.userRepository.findById(userId);
+      if (!user || !user.departmentId) {
+        // No department means no schedule restrictions
+        return { isValid: true };
+      }
+
+      // Validate against department schedule
+      const validation = await this.departmentScheduleService.validateAttendanceTime(
+        user.departmentId,
+        time,
+      );
+
+      if (!validation.isValid && validation.compliance) {
+        const flagReason = validation.compliance.message || 
+          `Attendance outside department working hours: ${validation.compliance.isWorkDay ? 'outside hours' : 'non-work day'}`;
+        
+        return {
+          isValid: false,
+          compliance: validation.compliance,
+          schedule: validation.schedule,
+          flagReason,
+        };
+      }
+
+      return {
+        isValid: true,
+        compliance: validation.compliance,
+        schedule: validation.schedule,
+      };
+    } catch (error) {
+      // If schedule validation fails, don't block attendance but log the error
+      console.warn(`Department schedule validation failed for user ${userId}:`, error);
+      return { isValid: true };
+    }
   }
 }

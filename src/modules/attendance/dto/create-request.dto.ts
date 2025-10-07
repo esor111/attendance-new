@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsNumber, MaxLength, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { RequestType } from '../entities/request.entity';
 
@@ -16,6 +16,20 @@ export class CreateRequestDto {
 }
 
 /**
+ * Balance info DTO for leave requests
+ */
+export class BalanceInfoDto {
+  @IsNumber({}, { message: 'Allocated days must be a number' })
+  allocatedDays: number;
+
+  @IsNumber({}, { message: 'Used days must be a number' })
+  usedDays: number;
+
+  @IsNumber({}, { message: 'Remaining days must be a number' })
+  remainingDays: number;
+}
+
+/**
  * Leave request specific data DTO
  */
 export class CreateLeaveRequestDataDto {
@@ -30,7 +44,7 @@ export class CreateLeaveRequestDataDto {
   @IsString({ message: 'End date must be a string' })
   endDate: string;
 
-  @IsString({ message: 'Days requested must be a number' })
+  @IsNumber({}, { message: 'Days requested must be a number' })
   daysRequested: number;
 
   @IsOptional()
@@ -46,11 +60,9 @@ export class CreateLeaveRequestDataDto {
   @MaxLength(500, { message: 'Emergency justification cannot exceed 500 characters' })
   emergencyJustification?: string;
 
-  balanceInfo: {
-    allocatedDays: number;
-    usedDays: number;
-    remainingDays: number;
-  };
+  @ValidateNested()
+  @Type(() => BalanceInfoDto)
+  balanceInfo: BalanceInfoDto;
 }
 
 /**

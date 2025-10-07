@@ -1,0 +1,60 @@
+{
+  "testEnvironment": {
+    "database": {
+      "host": "localhost",
+      "port": 5432,
+      "username": "test_user",
+      "password": "test_password",
+      "database": "attendance_test"
+    },
+    "auth": {
+      "testUsers": [
+        {
+          "email": "employee@company.com",
+          "password": "password123",
+          "role": "employee",
+          "name": "Test Employee"
+        },
+        {
+          "email": "manager@company.com", 
+          "password": "password123",
+          "role": "manager",
+          "name": "Test Manager"
+        }
+      ]
+    },
+    "testData": {
+      "createSampleRequests": true,
+      "cleanupAfterTests": true,
+      "preserveTestData": false
+    }
+  },
+  "testSuites": {
+    "migration": {
+      "enabled": true,
+      "timeout": 30000,
+      "description": "Tests data migration from separate tables to unified system"
+    },
+    "api": {
+      "enabled": true,
+      "timeout": 10000,
+      "description": "Tests all API endpoints for unified request system"
+    },
+    "workflows": {
+      "enabled": true,
+      "timeout": 15000,
+      "description": "Tests complete end-to-end workflows for each request type"
+    },
+    "performance": {
+      "enabled": false,
+      "timeout": 5000,
+      "description": "Performance and load testing for request system"
+    }
+  },
+  "reporting": {
+    "generateReport": true,
+    "reportFormat": "html",
+    "includeScreenshots": false,
+    "outputDirectory": "./test-results"
+  }
+}

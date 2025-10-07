@@ -1,0 +1,386 @@
+// Attendance Microservice Database Schema
+// Use DBML to define your database structure
+// Docs: https://dbml.dbdiagram.io/docs
+
+// Base Entity Fields (inherited by all tables)
+// All tables have: id (uuid, primary key), created_at (timestamp), updated_at (timestamp)
+
+Table users {
+  id uuid [primary key]
+  name varchar(255) [not null]
+  phone varchar(20) [unique, not null]
+  email varchar(255) [unique, not null]
+  address text
+  user_id varchar(255) [note: 'External microservice ID for handshake']
+  is_field_worker boolean [default: false]
+  department_id uuid
+  last_synced_at timestamp [note: 'Tracks sync from external service']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table departments {
+  id uuid [primary key]
+  name varchar(100) [not null]
+  business_id uuid [not null, note: 'Reference to external Business Microservice']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  
+  indexes {
+    (name, business_id) [unique, name: 'unique_department_name_per_business']
+  }
+}
+
+Table department_schedules {
+  id uuid [primary key]
+  department_id uuid [not null]
+  name varchar(100) [not null]
+  start_time time [not null]
+  end_time time [not null]
+  work_days json [not null, note: 'Array of numbers [0,1,2,3,4,5,6] where 0=Sunday']
+  is_active boolean [default: true]
+  description text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  
+  indexes {
+    department_id [name: 'idx_department_schedule_dept']
+    is_active [name: 'idx_department_schedule_active']
+  }
+}
+
+Table entities {
+  id uuid [primary key]
+  name varchar(255) [not null]
+  kaha_id varchar(100) [unique, not null, note: 'Unique business location identifier']
+  geohash varchar(12) [not null, note: 'For efficient proximity pre-filtering']
+  address text
+  location geography [not null, note: 'PostGIS Point for precise location (SRID 4326)']
+  radius_meters integer [default: 100, note: 'Check-in radius in meters']
+  avatar_url text
+  cover_image_url text
+  description text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table department_entity_assignments {
+  id uuid [primary key]
+  department_id uuid [not null]
+  entity_id uuid [not null]
+  is_primary boolean [default: false, note: 'Only one primary entity per department']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  
+  indexes {
+    (department_id, entity_id) [unique]
+  }
+}
+
+Table user_entity_assignments {
+  id uuid [primary key]
+  user_id uuid [not null]
+  entity_id uuid [not null]
+  is_primary boolean [default: false, note: 'Primary work location for user']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  
+  indexes {
+    (user_id, entity_id) [unique, name: 'unique_user_entity']
+    user_id [name: 'idx_user_entity_assignments_user']
+    entity_id [name: 'idx_user_entity_assignments_entity']
+    is_primary [name: 'idx_user_entity_assignments_primary']
+  }
+}
+
+Table daily_attendance {
+  id uuid [primary key]
+  user_id uuid [not null]
+  date date [not null]
+  clock_in_time timestamp
+  clock_in_latitude decimal(10,8)
+  clock_in_longitude decimal(11,8)
+  clock_out_time timestamp
+  clock_out_latitude decimal(10,8)
+  clock_out_longitude decimal(11,8)
+  entity_id uuid
+  is_within_radius boolean
+  travel_speed_kmph decimal(6,2)
+  is_flagged boolean [default: false]
+  flag_reason text
+  total_hours decimal(5,2)
+  status varchar(20) [default: 'Present']
+  notes text
+  work_location varchar(20) [default: 'OFFICE', note: 'OFFICE, REMOTE, FIELD']
+  remote_location varchar(255)
+  is_remote_approved boolean [default: false]
+  remote_approver_id uuid
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  
+  indexes {
+    (user_id, date) [unique, name: 'unique_user_date']
+    (user_id, date) [name: 'idx_daily_attendance_user_date']
+    entity_id [name: 'idx_daily_attendance_entity']
+    is_flagged [name: 'idx_daily_attendance_flagged']
+  }
+}
+
+Table attendance_sessions {
+  id uuid [primary key]
+  attendance_id uuid [not null]
+  check_in_time timestamp [not null]
+  check_in_latitude decimal(10,8) [not null]
+  check_in_longitude decimal(11,8) [not null]
+  check_out_time timestamp
+  check_out_latitude decimal(10,8)
+  check_out_longitude decimal(11,8)
+  is_within_radius boolean [not null]
+  travel_speed_kmph decimal(6,2)
+  is_flagged boolean [default: false]
+  flag_reason text
+  session_duration_minutes integer
+  session_type varchar(50) [default: 'work', note: 'work, break, lunch, meeting, errand']
+  notes text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  
+  indexes {
+    attendance_id [name: 'idx_attendance_sessions_attendance']
+    session_type [name: 'idx_attendance_sessions_type']
+    is_flagged [name: 'idx_attendance_sessions_flagged']
+  }
+}
+
+Table location_logs {
+  id uuid [primary key]
+  attendance_id uuid [not null]
+  entity_id uuid [not null]
+  place_name varchar(255) [not null]
+  check_in_time timestamp
+  check_in_latitude decimal(10,8)
+  check_in_longitude decimal(11,8)
+  check_out_time timestamp
+  check_out_latitude decimal(10,8)
+  check_out_longitude decimal(11,8)
+  is_within_radius boolean
+  travel_speed_kmph decimal(6,2)
+  is_flagged boolean [default: false]
+  flag_reason text
+  visit_duration_minutes integer
+  purpose text
+  notes text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  
+  indexes {
+    attendance_id [name: 'idx_location_logs_attendance']
+    entity_id [name: 'idx_location_logs_entity']
+    is_flagged [name: 'idx_location_logs_flagged']
+  }
+}
+
+Table reporting_structure {
+  id uuid [primary key]
+  employee_id uuid [not null]
+  manager_id uuid [not null]
+  start_date date [not null]
+  end_date date
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  
+  indexes {
+    employee_id [name: 'idx_reporting_structure_employee']
+    manager_id [name: 'idx_reporting_structure_manager']
+    (start_date, end_date) [name: 'idx_reporting_structure_dates']
+  }
+}
+
+Table remote_work_requests {
+  id uuid [primary key]
+  user_id uuid [not null]
+  requested_date date [not null]
+  reason varchar(500) [not null]
+  remote_location varchar(255) [not null]
+  status varchar(20) [default: 'PENDING', note: 'PENDING, APPROVED, REJECTED, CANCELLED']
+  approver_id uuid
+  approved_at timestamp
+  approval_notes text
+  requested_at timestamp [not null]
+  notes text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  
+  indexes {
+    (user_id, requested_date) [name: 'idx_remote_work_user_date']
+    status [name: 'idx_remote_work_status']
+    approver_id [name: 'idx_remote_work_approver']
+  }
+}
+
+Table attendance_requests {
+  id uuid [primary key]
+  user_id uuid [not null]
+  requested_date date [not null]
+  reason text [not null]
+  status varchar(20) [default: 'PENDING', note: 'PENDING, APPROVED, REJECTED']
+  approver_id uuid
+  approval_date timestamp
+  approval_notes text
+  created_attendance_id uuid
+  request_deadline timestamp
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  
+  indexes {
+    user_id [name: 'idx_attendance_request_user']
+    requested_date [name: 'idx_attendance_request_date']
+    status [name: 'idx_attendance_request_status']
+    approver_id [name: 'idx_attendance_request_approver']
+  }
+}
+
+Table leave_types {
+  id uuid [primary key]
+  name varchar(100) [unique, not null]
+  description text
+  max_days_per_year integer [not null]
+  requires_approval boolean [default: true]
+  can_carry_forward boolean [default: false]
+  max_carry_forward_days integer [default: 0]
+  min_advance_notice_days integer [default: 0]
+  is_active boolean [default: true]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table leave_requests {
+  id uuid [primary key]
+  user_id uuid [not null]
+  leave_type_id uuid [not null]
+  start_date date [not null]
+  end_date date [not null]
+  days_requested decimal(3,1) [not null]
+  reason text
+  status varchar(20) [default: 'PENDING', note: 'PENDING, APPROVED, REJECTED, CANCELLED']
+  approver_id uuid
+  approved_at timestamp
+  approval_comments text
+  rejection_reason text
+  is_emergency boolean [default: false]
+  emergency_justification text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  
+  indexes {
+    (user_id, start_date, end_date) [name: 'idx_leave_request_user_dates']
+    status [name: 'idx_leave_request_status']
+    approver_id [name: 'idx_leave_request_approver']
+  }
+}
+
+Table leave_balances {
+  id uuid [primary key]
+  user_id uuid [not null]
+  leave_type_id uuid [not null]
+  year integer [not null]
+  allocated_days decimal(4,1) [default: 0]
+  used_days decimal(4,1) [default: 0]
+  carried_forward_days decimal(4,1) [default: 0]
+  pending_days decimal(4,1) [default: 0]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  
+  indexes {
+    (user_id, leave_type_id, year) [unique, name: 'unique_user_leave_type_year']
+    (user_id, year) [name: 'idx_leave_balance_user_year']
+  }
+}
+
+Table holidays {
+  id uuid [primary key]
+  name varchar(100) [not null]
+  date date [not null]
+  type varchar(20) [default: 'COMPANY', note: 'NATIONAL, COMPANY, DEPARTMENT']
+  recurrence varchar(20) [default: 'NONE', note: 'NONE, YEARLY, MONTHLY']
+  department_id uuid
+  description text
+  is_active boolean [default: true]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  
+  indexes {
+    date [name: 'idx_holiday_date']
+    type [name: 'idx_holiday_type']
+    department_id [name: 'idx_holiday_department']
+  }
+}
+
+Table holiday_calendars {
+  id uuid [primary key]
+  holiday_id uuid [not null]
+  year integer [not null]
+  department_id uuid
+  actual_date date [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  
+  indexes {
+    year [name: 'idx_holiday_calendar_year']
+    department_id [name: 'idx_holiday_calendar_department']
+    (holiday_id, year, department_id) [unique, name: 'unique_holiday_year_department']
+  }
+}
+
+// Relationships
+
+// User relationships
+Ref: users.department_id > departments.id
+
+// Department relationships
+Ref: department_schedules.department_id > departments.id
+Ref: department_entity_assignments.department_id > departments.id
+Ref: department_entity_assignments.entity_id > entities.id
+
+// User-Entity assignments
+Ref: user_entity_assignments.user_id > users.id
+Ref: user_entity_assignments.entity_id > entities.id
+
+// Daily Attendance relationships
+Ref: daily_attendance.user_id > users.id
+Ref: daily_attendance.entity_id > entities.id
+Ref: daily_attendance.remote_approver_id > users.id
+
+// Attendance Sessions relationships
+Ref: attendance_sessions.attendance_id > daily_attendance.id
+
+// Location Logs relationships
+Ref: location_logs.attendance_id > daily_attendance.id
+Ref: location_logs.entity_id > entities.id
+
+// Reporting Structure relationships
+Ref: reporting_structure.employee_id > users.id
+Ref: reporting_structure.manager_id > users.id
+
+// Remote Work Request relationships
+Ref: remote_work_requests.user_id > users.id
+Ref: remote_work_requests.approver_id > users.id
+
+// Attendance Request relationships
+Ref: attendance_requests.user_id > users.id
+Ref: attendance_requests.approver_id > users.id
+Ref: attendance_requests.created_attendance_id > daily_attendance.id
+
+// Leave Request relationships
+Ref: leave_requests.user_id > users.id
+Ref: leave_requests.leave_type_id > leave_types.id
+Ref: leave_requests.approver_id > users.id
+
+// Leave Balance relationships
+Ref: leave_balances.user_id > users.id
+Ref: leave_balances.leave_type_id > leave_types.id
+
+// Holiday relationships
+Ref: holidays.department_id > departments.id
+Ref: holiday_calendars.holiday_id > holidays.id
+Ref: holiday_calendars.department_id > departments.id

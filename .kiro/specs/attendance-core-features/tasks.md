@@ -264,3 +264,65 @@
   - Test schedule compliance reporting and analytics
   - Add performance tests for schedule validation queries
   - _Requirements: Integration of department schedules, attendance requests, and existing attendance system_
+
+- [x] 15. Simplify Leave Management System - Consolidate Tables and Remove Over-Engineering
+
+
+
+
+
+-look at database-simplication-strategy.md for context on this task
+  - Remove LeaveType entity and leave_types table completely (move to enum in code)
+  - Remove LeaveBalance entity and leave_balances table (embed balance data in leave requests)
+  - Update LeaveRequest entity to include embedded leave type enum (ANNUAL, SICK, PERSONAL, EMERGENCY)
+  - Add JSON column to LeaveRequest for balance tracking (allocatedDays, usedDays, remainingDays)
+  - Delete LeaveTypeRepository and LeaveBalanceRepository files
+  - Delete LeaveApprovalService and LeaveBalanceService (consolidate into LeaveService)
+  - Update LeaveService to handle all leave operations with simplified business logic
+  - Remove leave type seeding and balance initialization complexity
+  - Update LeaveController to use simplified API endpoints (remove type management endpoints)
+  - Update all leave DTOs to use enum instead of leaveTypeId references
+  - Update LeaveModule imports and providers to remove deleted services and repositories
+  - Create migration strategy to preserve existing leave data during consolidation
+  - _Requirements: Reduce leave management from 3 tables to 1 table, eliminate configuration overhead_
+
+- [x] 16. Simplify Holiday System - Eliminate Calendar Generation Complexity
+
+
+
+
+
+-look at database-simplication-strategy.md for context on this task
+  - Delete HolidayCalendar entity and holiday_calendars table completely
+  - Delete HolidayCalendarService and holiday-calendar.repository.ts files
+  - Update Holiday entity to remove complex relationships and calendar associations
+  - Implement holiday date calculation logic in HolidayService (replace stored calendar with computed dates)
+  - Add methods for yearly/monthly recurrence calculation without database storage
+  - Remove calendar generation endpoints from HolidayController (GET /calendar/:year, POST /calendar/:year/generate)
+  - Update holiday checking logic to use real-time calculation instead of pre-generated calendar queries
+  - Simplify holiday validation in AttendanceValidationService to use calculation-based approach
+  - Update HolidayModule to remove calendar-related imports and providers
+  - Remove holiday calendar seeding and generation complexity
+  - Update holiday DTOs to remove calendar-specific fields and operations
+  - Create simple isHoliday(date, departmentId) method using date math instead of database lookups
+  - _Requirements: Reduce holiday system from 2 tables to 1 table, eliminate calendar generation overhead_
+
+- [x] 17. Consolidate Request Tables - Unify All Request Types into Single Generic System
+
+
+
+
+  -look at database-simplication-strategy.md for context on this task
+  - Create new unified Request entity to replace AttendanceRequest, RemoteWorkRequest, and LeaveRequest
+  - Add requestType enum (LEAVE, REMOTE_WORK, ATTENDANCE_CORRECTION) to distinguish request types
+  - Add JSON requestData column to store type-specific data instead of separate columns
+  - Delete AttendanceRequest, RemoteWorkRequest entities and their repository files
+  - Create unified RequestRepository to handle all request types with generic CRUD operations
+  - Update RequestService to handle all request types with type-specific business logic
+  - Consolidate AttendanceRequestService and RemoteWorkService into unified RequestService
+  - Update request controllers to use unified request endpoints with type parameter
+  - Create generic approval workflow that works for all request types
+  - Update request DTOs to use discriminated unions based on request type
+  - Update AttendanceModule imports to remove separate request entities and services
+  - Migrate existing request data to unified table structure preserving all information
+  - _Requirements: Reduce 3 request tables to 1 generic table, eliminate duplicate approval workflows_

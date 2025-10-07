@@ -14,16 +14,13 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
 import { LeaveService } from '../services/leave.service';
-import { LeaveApprovalService } from '../services/leave-approval.service';
-import { LeaveBalanceService } from '../services/leave-balance.service';
 import { CreateLeaveRequestDto } from '../dto/create-leave-request.dto';
 import { ApproveLeaveRequestDto } from '../dto/approve-leave-request.dto';
-import { LeaveBalanceQueryDto } from '../dto/leave-balance-query.dto';
 
 /**
- * Leave Controller - Handles all leave management HTTP requests
- * Provides endpoints for leave requests, approvals, and balance management
- * Integrates with leave services for business logic processing
+ * Simplified Leave Controller - Handles all leave management HTTP requests
+ * Uses consolidated LeaveService for all leave operations
+ * Eliminates complex service dependencies and reduces maintenance overhead
  */
 @ApiTags('Leave Management')
 @ApiBearerAuth()
@@ -32,8 +29,6 @@ import { LeaveBalanceQueryDto } from '../dto/leave-balance-query.dto';
 export class LeaveController {
   constructor(
     private readonly leaveService: LeaveService,
-    private readonly leaveApprovalService: LeaveApprovalService,
-    private readonly leaveBalanceService: LeaveBalanceService,
   ) {}
 
   /**
@@ -275,27 +270,27 @@ export class LeaveController {
       example: [
         {
           leaveType: {
-            id: 'leave-type-uuid',
+            type: 'ANNUAL',
             name: 'Annual Leave',
             maxDaysPerYear: 25,
+            requiresApproval: true,
           },
+          year: 2025,
           allocatedDays: 25,
           usedDays: 8,
-          carriedForwardDays: 2,
-          pendingDays: 3,
-          remainingDays: 16,
-          totalAvailableDays: 27,
+          remainingDays: 17,
+          totalAvailableDays: 25,
         },
         {
           leaveType: {
-            id: 'sick-leave-uuid',
+            type: 'SICK',
             name: 'Sick Leave',
             maxDaysPerYear: 10,
+            requiresApproval: false,
           },
+          year: 2025,
           allocatedDays: 10,
           usedDays: 2,
-          carriedForwardDays: 0,
-          pendingDays: 0,
           remainingDays: 8,
           totalAvailableDays: 10,
         },
@@ -304,9 +299,9 @@ export class LeaveController {
   })
   async getUserLeaveBalances(
     @Request() req: any,
-    @Query() query: LeaveBalanceQueryDto,
+    @Query('year', new DefaultValuePipe(new Date().getFullYear()), ParseIntPipe) year: number,
   ) {
-    return await this.leaveBalanceService.getBalanceSummary(req.user.userId, query.year);
+    return await this.leaveService.getUserLeaveBalances(req.user.userId, year);
   }
 
   /**
@@ -366,9 +361,7 @@ export class LeaveController {
             name: 'Jane Doe',
             email: 'jane.doe@company.com',
           },
-          leaveType: {
-            name: 'Annual Leave',
-          },
+          leaveType: 'ANNUAL',
           startDate: '2025-10-15',
           endDate: '2025-10-17',
           daysRequested: 3,
@@ -379,45 +372,6 @@ export class LeaveController {
     },
   })
   async getPendingApprovals(@Request() req: any) {
-    return await this.leaveApprovalService.getPendingApprovalsForManager(req.user.userId);
-  }
-
-  /**
-   * Get approval statistics for managers
-   */
-  @Get('approval-statistics')
-  @ApiOperation({
-    summary: 'Get approval statistics',
-    description: 'Retrieve approval statistics for the manager',
-  })
-  @ApiQuery({ name: 'startDate', type: String, example: '2025-10-01' })
-  @ApiQuery({ name: 'endDate', type: String, example: '2025-10-31' })
-  @ApiResponse({
-    status: 200,
-    description: 'Approval statistics',
-    schema: {
-      example: {
-        totalRequests: 25,
-        pendingRequests: 3,
-        approvedRequests: 20,
-        rejectedRequests: 2,
-        approvalRate: 90.9,
-        averageResponseTime: 24,
-      },
-    },
-  })
-  async getApprovalStatistics(
-    @Request() req: any,
-    @Query('startDate') startDateStr: string,
-    @Query('endDate') endDateStr: string,
-  ) {
-    const startDate = new Date(startDateStr);
-    const endDate = new Date(endDateStr);
-    
-    return await this.leaveApprovalService.getApprovalStatistics(
-      req.user.userId,
-      startDate,
-      endDate,
-    );
+    return await this.leaveService.getPendingTeamRequests(req.user.userId);
   }
 }

@@ -6,6 +6,8 @@ import { ReportingController } from './controllers/reporting.controller';
 import { RemoteWorkController } from './controllers/remote-work.controller';
 import { AttendanceRequestController } from './controllers/attendance-request.controller';
 import { UserScheduleController } from './controllers/user-schedule.controller';
+import { RequestController } from './controllers/request.controller';
+import { MigrationController } from './controllers/migration.controller';
 import { AttendanceService } from './services/attendance.service';
 import { GeospatialService } from './services/geospatial.service';
 import { FraudDetectionService } from './services/fraud-detection.service';
@@ -15,6 +17,8 @@ import { EntityAccessService } from './services/entity-access.service';
 import { ReportingService } from './services/reporting.service';
 import { RemoteWorkService } from './services/remote-work.service';
 import { AttendanceRequestService } from './services/attendance-request.service';
+import { RequestService } from './services/request.service';
+import { ConsolidateRequestsMigration } from './migrations/consolidate-requests-migration';
 import { DailyAttendance } from './entities/daily-attendance.entity';
 import { AttendanceSession } from './entities/attendance-session.entity';
 import { LocationLog } from './entities/location-log.entity';
@@ -22,6 +26,7 @@ import { UserEntityAssignment } from './entities/user-entity-assignment.entity';
 import { ReportingStructure } from './entities/reporting-structure.entity';
 import { RemoteWorkRequest } from './entities/remote-work-request.entity';
 import { AttendanceRequest } from './entities/attendance-request.entity';
+import { Request } from './entities/request.entity';
 import { DailyAttendanceRepository } from './repositories/daily-attendance.repository';
 import { AttendanceSessionRepository } from './repositories/attendance-session.repository';
 import { LocationLogRepository } from './repositories/location-log.repository';
@@ -29,6 +34,9 @@ import { UserEntityAssignmentRepository } from './repositories/user-entity-assig
 import { ReportingStructureRepository } from './repositories/reporting-structure.repository';
 import { RemoteWorkRequestRepository } from './repositories/remote-work-request.repository';
 import { AttendanceRequestRepository } from './repositories/attendance-request.repository';
+import { RequestRepository } from './repositories/request.repository';
+// Import LeaveRequest for migration
+import { LeaveRequest } from '../leave/entities/leave-request.entity';
 import { UserModule } from '../user/user.module';
 import { EntityModule } from '../entity/entity.module';
 import { DepartmentModule } from '../department/department.module';
@@ -53,6 +61,8 @@ import { DepartmentEntityAssignment } from '../department/entities/department-en
       ReportingStructure,
       RemoteWorkRequest,
       AttendanceRequest,
+      Request, // New unified request entity
+      LeaveRequest, // Needed for migration
       // Add entities needed by GeospatialService
       User,
       BusinessEntity,
@@ -63,7 +73,16 @@ import { DepartmentEntityAssignment } from '../department/entities/department-en
     DepartmentModule,
     HolidayModule,
   ],
-  controllers: [AttendanceController, EntityAccessController, ReportingController, RemoteWorkController, AttendanceRequestController, UserScheduleController],
+  controllers: [
+    AttendanceController, 
+    EntityAccessController, 
+    ReportingController, 
+    RemoteWorkController, 
+    AttendanceRequestController, 
+    UserScheduleController,
+    RequestController, // New unified request controller
+    MigrationController, // Migration controller for data consolidation
+  ],
   providers: [
     AttendanceService,
     GeospatialService,
@@ -74,6 +93,7 @@ import { DepartmentEntityAssignment } from '../department/entities/department-en
     ReportingService,
     RemoteWorkService,
     AttendanceRequestService,
+    RequestService, // New unified request service
     DailyAttendanceRepository,
     AttendanceSessionRepository,
     LocationLogRepository,
@@ -81,6 +101,8 @@ import { DepartmentEntityAssignment } from '../department/entities/department-en
     ReportingStructureRepository,
     RemoteWorkRequestRepository,
     AttendanceRequestRepository,
+    RequestRepository, // New unified request repository
+    ConsolidateRequestsMigration, // Migration service
   ],
   exports: [
     AttendanceService,
@@ -92,6 +114,7 @@ import { DepartmentEntityAssignment } from '../department/entities/department-en
     ReportingService,
     RemoteWorkService,
     AttendanceRequestService,
+    RequestService, // New unified request service
     DailyAttendanceRepository,
     AttendanceSessionRepository,
     LocationLogRepository,
@@ -99,6 +122,7 @@ import { DepartmentEntityAssignment } from '../department/entities/department-en
     ReportingStructureRepository,
     RemoteWorkRequestRepository,
     AttendanceRequestRepository,
+    RequestRepository, // New unified request repository
   ],
 })
 export class AttendanceModule {}

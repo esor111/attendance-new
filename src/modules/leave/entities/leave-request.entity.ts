@@ -1,8 +1,7 @@
 import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
-import { IsUUID, IsString, IsNumber, IsOptional, Min } from 'class-validator';
+import { IsUUID, IsString, IsNumber, IsOptional, Min, IsEnum } from 'class-validator';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { User } from '../../user/entities/user.entity';
-import { LeaveType } from './leave-type.entity';
 
 export enum LeaveRequestStatus {
   PENDING = 'PENDING',
@@ -11,23 +10,37 @@ export enum LeaveRequestStatus {
   CANCELLED = 'CANCELLED',
 }
 
+export enum LeaveType {
+  ANNUAL = 'ANNUAL',
+  SICK = 'SICK',
+  PERSONAL = 'PERSONAL',
+  EMERGENCY = 'EMERGENCY',
+}
+
+export interface LeaveBalanceInfo {
+  allocatedDays: number;
+  usedDays: number;
+  remainingDays: number;
+}
 
 /**
- * Leave Request Entity - Tracks employee leave requests with approval workflow
- * Includes date range, status tracking, and approval chain management
+ * Leave Request Entity - Simplified leave management with embedded leave type and balance tracking
+ * Consolidates leave types, requests, and balances into a single entity
+ * Eliminates complex relationships and reduces maintenance overhead
  */
 @Entity('leave_requests')
 @Index('idx_leave_request_user_dates', ['userId', 'startDate', 'endDate'])
 @Index('idx_leave_request_status', ['status'])
 @Index('idx_leave_request_approver', ['approverId'])
+@Index('idx_leave_request_type', ['leaveType'])
 export class LeaveRequest extends BaseEntity {
   @Column({ type: 'uuid' })
   @IsUUID(4, { message: 'User ID must be a valid UUID' })
   userId: string;
 
-  @Column({ type: 'uuid' })
-  @IsUUID(4, { message: 'Leave type ID must be a valid UUID' })
-  leaveTypeId: string;
+  @Column({ type: 'enum', enum: LeaveType })
+  @IsEnum(LeaveType, { message: 'Leave type must be a valid leave type' })
+  leaveType: LeaveType;
 
   @Column({ type: 'date' })
   startDate: Date;
@@ -79,16 +92,64 @@ export class LeaveRequest extends BaseEntity {
   @IsString({ message: 'Emergency justification must be a string' })
   emergencyJustification?: string;
 
+  @Column({ type: 'json' })
+  balanceInfo: LeaveBalanceInfo;
+
   // Relationships
   @ManyToOne(() => User, { eager: false })
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @ManyToOne(() => LeaveType, (leaveType) => leaveType.leaveRequests, { eager: false })
-  @JoinColumn({ name: 'leave_type_id' })
-  leaveType: LeaveType;
-
   @ManyToOne(() => User, { eager: false, nullable: true })
   @JoinColumn({ name: 'approver_id' })
   approver?: User;
+
+  /**
+   * Get leave type configuration based on enum value
+   */
+  getLeaveTypeConfig(): {
+    name: string;
+    maxDaysPerYear: number;
+    requiresApproval: boolean;
+    canCarryForward: boolean;
+    maxCarryForwardDays: number;
+    minAdvanceNoticeDays: number;
+  } {
+    const configs = {
+      [LeaveType.ANNUAL]: {
+        name: 'Annual Leave',
+        maxDaysPerYear: 25,
+        requiresApproval: true,
+        canCarryForward: true,
+        maxCarryForwardDays: 5,
+        minAdvanceNoticeDays: 7,
+      },
+      [LeaveType.SICK]: {
+        name: 'Sick Leave',
+        maxDaysPerYear: 10,
+        requiresApproval: false,
+        canCarryForward: false,
+        maxCarryForwardDays: 0,
+        minAdvanceNoticeDays: 0,
+      },
+      [LeaveType.PERSONAL]: {
+        name: 'Personal Leave',
+        maxDaysPerYear: 5,
+        requiresApproval: true,
+        canCarryForward: false,
+        maxCarryForwardDays: 0,
+        minAdvanceNoticeDays: 3,
+      },
+      [LeaveType.EMERGENCY]: {
+        name: 'Emergency Leave',
+        maxDaysPerYear: 3,
+        requiresApproval: true,
+        canCarryForward: false,
+        maxCarryForwardDays: 0,
+        minAdvanceNoticeDays: 0,
+      },
+    };
+
+    return configs[this.leaveType];
+  }
 }

@@ -1,13 +1,15 @@
-import { IsUUID, IsDateString, IsNumber, IsOptional, IsString, IsBoolean, Min } from 'class-validator';
+import { IsDateString, IsNumber, IsOptional, IsString, IsBoolean, IsEnum, Min } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { LeaveType } from '../entities/leave-request.entity';
 
 /**
  * DTO for creating a new leave request
  * Includes validation for date range, leave type, and optional emergency handling
+ * Updated to use leave type enum instead of UUID reference
  */
 export class CreateLeaveRequestDto {
-  @IsUUID(4, { message: 'Leave type ID must be a valid UUID' })
-  leaveTypeId: string;
+  @IsEnum(LeaveType, { message: 'Leave type must be a valid leave type (ANNUAL, SICK, PERSONAL, EMERGENCY)' })
+  leaveType: LeaveType;
 
   @IsDateString({}, { message: 'Start date must be a valid date string (YYYY-MM-DD)' })
   startDate: string;

@@ -3,7 +3,7 @@ import { HolidayRepository } from '../repositories/holiday.repository';
 import { CreateHolidayDto } from '../dto/create-holiday.dto';
 import { UpdateHolidayDto } from '../dto/update-holiday.dto';
 import { HolidayQueryDto } from '../dto/holiday-query.dto';
-import { Holiday, HolidayType } from '../entities/holiday.entity';
+import { Holiday, HolidayType, RecurrenceType } from '../entities/holiday.entity';
 
 /**
  * Holiday Service - Manages holiday creation, updates, and queries
@@ -134,29 +134,204 @@ export class HolidayService {
   }
 
   /**
-   * Check if a specific date is a holiday
+   * Check if a specific date is a holiday using real-time calculation
    */
   async isHoliday(date: Date, departmentId?: string): Promise<boolean> {
-    return this.holidayRepository.isHoliday(date, departmentId);
+    const holidays = await this.getHolidaysForDate(date, departmentId);
+    return holidays.length > 0;
   }
 
   /**
-   * Get holidays for a specific date
+   * Get holidays for a specific date using real-time calculation
    */
   async getHolidaysByDate(date: Date, departmentId?: string): Promise<Holiday[]> {
-    return this.holidayRepository.findByDate(date, departmentId);
+    return this.getHolidaysForDate(date, departmentId);
   }
 
   /**
-   * Validate holiday conflicts
+   * Get holidays for a specific date using real-time calculation
+   * Replaces the old calendar-based approach with computed dates
+   */
+  async getHolidaysForDate(date: Date, departmentId?: string): Promise<Holiday[]> {
+    // Get all active holidays that could apply to this date
+    const allHolidays = await this.holidayRepository.find({
+      where: { isActive: true },
+      relations: ['department'],
+    });
+
+    const matchingHolidays: Holiday[] = [];
+
+    for (const holiday of allHolidays) {
+      // Check department filtering
+      if (departmentId) {
+        // For department-specific holidays, must match the department
+        if (holiday.type === HolidayType.DEPARTMENT && holiday.departmentId !== departmentId) {
+          continue;
+        }
+        // For non-department holidays, they apply to all departments
+      } else {
+        // If no department specified, only include non-department holidays
+        if (holiday.type === HolidayType.DEPARTMENT) {
+          continue;
+        }
+      }
+
+      // Check if the holiday matches the given date based on recurrence
+      if (this.doesHolidayMatchDate(holiday, date)) {
+        matchingHolidays.push(holiday);
+      }
+    }
+
+    return matchingHolidays;
+  }
+
+  /**
+   * Get holidays for a specific year with optional department filtering
+   * Replaces the old calendar generation with real-time calculation
+   */
+  async getHolidaysForYear(year: number, departmentId?: string): Promise<Array<Holiday & { actualDate: Date }>> {
+    // Get all active holidays
+    const allHolidays = await this.holidayRepository.find({
+      where: { isActive: true },
+      relations: ['department'],
+    });
+
+    const yearHolidays: Array<Holiday & { actualDate: Date }> = [];
+
+    for (const holiday of allHolidays) {
+      // Check department filtering
+      if (departmentId) {
+        if (holiday.type === HolidayType.DEPARTMENT && holiday.departmentId !== departmentId) {
+          continue;
+        }
+      } else {
+        if (holiday.type === HolidayType.DEPARTMENT) {
+          continue;
+        }
+      }
+
+      // Calculate actual dates for this year based on recurrence
+      const actualDates = this.calculateHolidayDatesForYear(holiday, year);
+      
+      for (const actualDate of actualDates) {
+        yearHolidays.push({
+          ...holiday,
+          actualDate,
+        });
+      }
+    }
+
+    // Sort by actual date
+    yearHolidays.sort((a, b) => a.actualDate.getTime() - b.actualDate.getTime());
+
+    return yearHolidays;
+  }
+
+  /**
+   * Get holidays for a date range with optional department filtering
+   */
+  async getHolidaysForDateRange(
+    startDate: Date,
+    endDate: Date,
+    departmentId?: string,
+  ): Promise<Array<Holiday & { actualDate: Date }>> {
+    const startYear = startDate.getFullYear();
+    const endYear = endDate.getFullYear();
+    
+    const allHolidays: Array<Holiday & { actualDate: Date }> = [];
+
+    // Get holidays for each year in the range
+    for (let year = startYear; year <= endYear; year++) {
+      const yearHolidays = await this.getHolidaysForYear(year, departmentId);
+      allHolidays.push(...yearHolidays);
+    }
+
+    // Filter by date range
+    return allHolidays.filter(holiday => 
+      holiday.actualDate >= startDate && holiday.actualDate <= endDate
+    );
+  }
+
+  /**
+   * Check if a holiday matches a specific date based on its recurrence pattern
+   */
+  private doesHolidayMatchDate(holiday: Holiday, date: Date): boolean {
+    const holidayDate = new Date(holiday.date);
+    
+    switch (holiday.recurrence) {
+      case RecurrenceType.YEARLY:
+        // Match if month and day are the same
+        return (
+          holidayDate.getMonth() === date.getMonth() &&
+          holidayDate.getDate() === date.getDate()
+        );
+      
+      case RecurrenceType.MONTHLY:
+        // Match if day of month is the same
+        return holidayDate.getDate() === date.getDate();
+      
+      case RecurrenceType.NONE:
+      default:
+        // Match if exact date is the same
+        return (
+          holidayDate.getFullYear() === date.getFullYear() &&
+          holidayDate.getMonth() === date.getMonth() &&
+          holidayDate.getDate() === date.getDate()
+        );
+    }
+  }
+
+  /**
+   * Calculate all actual dates for a holiday in a specific year
+   */
+  private calculateHolidayDatesForYear(holiday: Holiday, year: number): Date[] {
+    const holidayDate = new Date(holiday.date);
+    const dates: Date[] = [];
+
+    switch (holiday.recurrence) {
+      case RecurrenceType.YEARLY:
+        // Create date for the same month/day in the target year
+        const yearlyDate = new Date(year, holidayDate.getMonth(), holidayDate.getDate());
+        // Only add if the date is valid (handles leap year edge cases)
+        if (yearlyDate.getMonth() === holidayDate.getMonth()) {
+          dates.push(yearlyDate);
+        }
+        break;
+
+      case RecurrenceType.MONTHLY:
+        // Create date for the same day of each month in the target year
+        const dayOfMonth = holidayDate.getDate();
+        for (let month = 0; month < 12; month++) {
+          const monthlyDate = new Date(year, month, dayOfMonth);
+          // Only add if the date is valid (handles months with fewer days)
+          if (monthlyDate.getMonth() === month && monthlyDate.getDate() === dayOfMonth) {
+            dates.push(monthlyDate);
+          }
+        }
+        break;
+
+      case RecurrenceType.NONE:
+      default:
+        // Only include if the holiday's year matches the requested year
+        if (holidayDate.getFullYear() === year) {
+          dates.push(new Date(holidayDate));
+        }
+        break;
+    }
+
+    return dates;
+  }
+
+  /**
+   * Validate holiday conflicts using real-time calculation
    */
   private async validateHolidayConflicts(
     date: Date,
-    type: HolidayType,
+    _type: HolidayType,
     departmentId?: string,
     excludeId?: string,
   ): Promise<void> {
-    const existingHolidays = await this.holidayRepository.findByDate(date, departmentId);
+    const existingHolidays = await this.getHolidaysForDate(date, departmentId);
 
     // Filter out the holiday being updated
     const conflictingHolidays = existingHolidays.filter(holiday => holiday.id !== excludeId);

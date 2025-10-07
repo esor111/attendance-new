@@ -1,8 +1,7 @@
-import { Entity, Column, ManyToOne, JoinColumn, Index, OneToMany } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { IsString, IsDateString, IsEnum, IsOptional, IsBoolean, Length } from 'class-validator';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Department } from '../../department/entities/department.entity';
-import { HolidayCalendar } from './holiday-calendar.entity';
 
 export enum HolidayType {
   NATIONAL = 'NATIONAL',
@@ -68,7 +67,4 @@ export class Holiday extends BaseEntity {
   @ManyToOne(() => Department, { eager: false, nullable: true })
   @JoinColumn({ name: 'department_id' })
   department?: Department;
-
-  @OneToMany(() => HolidayCalendar, (calendar) => calendar.holiday)
-  holidayCalendars: HolidayCalendar[];
 }

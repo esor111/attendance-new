@@ -1,39 +1,27 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { LeaveRequestRepository } from '../repositories/leave-request.repository';
-import { LeaveBalanceRepository } from '../repositories/leave-balance.repository';
-import { LeaveTypeRepository } from '../repositories/leave-type.repository';
-import { ReportingStructureRepository } from '../../attendance/repositories/reporting-structure.repository';
-import { LeaveRequest, LeaveRequestStatus } from '../entities/leave-request.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, Between } from 'typeorm';
+import { LeaveRequest, LeaveRequestStatus, LeaveType, LeaveBalanceInfo } from '../entities/leave-request.entity';
 import { CreateLeaveRequestDto } from '../dto/create-leave-request.dto';
-import { LeaveApprovalService } from './leave-approval.service';
-import { LeaveBalanceService } from './leave-balance.service';
+import { ReportingStructureRepository } from '../../attendance/repositories/reporting-structure.repository';
 
 /**
- * Leave Service - Core business logic for leave request operations
- * Handles leave request creation, validation, and workflow management
- * Integrates with balance management and approval workflows
+ * Simplified Leave Service - Consolidated leave management operations
+ * Handles leave requests, approvals, and balance management in a single service
+ * Eliminates complex relationships and reduces maintenance overhead
  */
 @Injectable()
 export class LeaveService {
   constructor(
-    private readonly leaveRequestRepository: LeaveRequestRepository,
-    private readonly leaveBalanceRepository: LeaveBalanceRepository,
-    private readonly leaveTypeRepository: LeaveTypeRepository,
+    @InjectRepository(LeaveRequest)
+    private readonly leaveRequestRepository: Repository<LeaveRequest>,
     private readonly reportingStructureRepository: ReportingStructureRepository,
-    private readonly leaveApprovalService: LeaveApprovalService,
-    private readonly leaveBalanceService: LeaveBalanceService,
   ) {}
 
   /**
    * Create a new leave request with validation and balance checks
    */
   async createLeaveRequest(userId: string, dto: CreateLeaveRequestDto): Promise<LeaveRequest> {
-    // Validate leave type exists and is active
-    const leaveType = await this.leaveTypeRepository.findById(dto.leaveTypeId);
-    if (!leaveType || !leaveType.isActive) {
-      throw new BadRequestException('Invalid or inactive leave type');
-    }
-
     // Parse and validate dates
     const startDate = new Date(dto.startDate);
     const endDate = new Date(dto.endDate);
@@ -42,14 +30,17 @@ export class LeaveService {
       throw new BadRequestException('Start date cannot be after end date');
     }
 
+    // Get leave type configuration
+    const leaveTypeConfig = this.getLeaveTypeConfig(dto.leaveType);
+
     // Validate advance notice requirement (unless emergency)
-    if (!dto.isEmergency && leaveType.minAdvanceNoticeDays > 0) {
+    if (!dto.isEmergency && leaveTypeConfig.minAdvanceNoticeDays > 0) {
       const today = new Date();
       const daysDifference = Math.ceil((startDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       
-      if (daysDifference < leaveType.minAdvanceNoticeDays) {
+      if (daysDifference < leaveTypeConfig.minAdvanceNoticeDays) {
         throw new BadRequestException(
-          `This leave type requires at least ${leaveType.minAdvanceNoticeDays} days advance notice`
+          `This leave type requires at least ${leaveTypeConfig.minAdvanceNoticeDays} days advance notice`
         );
       }
     }
@@ -60,34 +51,34 @@ export class LeaveService {
     }
 
     // Check for overlapping requests
-    const overlappingRequests = await this.leaveRequestRepository.findOverlappingRequests(
-      userId,
-      startDate,
-      endDate
-    );
+    const overlappingRequests = await this.findOverlappingRequests(userId, startDate, endDate);
     
     if (overlappingRequests.length > 0) {
       throw new BadRequestException('Leave request overlaps with existing approved or pending leave');
     }
 
-    // Check leave balance availability
+    // Get current balance for this leave type and year
     const year = startDate.getFullYear();
-    const balance = await this.leaveBalanceRepository.findByUserLeaveTypeYear(
-      userId,
-      dto.leaveTypeId,
-      year
-    );
+    const currentBalance = await this.getUserLeaveBalance(userId, dto.leaveType, year);
 
-    if (balance && balance.remainingDays < dto.daysRequested) {
+    // Check if sufficient balance is available
+    if (currentBalance.remainingDays < dto.daysRequested) {
       throw new BadRequestException(
-        `Insufficient leave balance. Available: ${balance.remainingDays} days, Requested: ${dto.daysRequested} days`
+        `Insufficient leave balance. Available: ${currentBalance.remainingDays} days, Requested: ${dto.daysRequested} days`
       );
     }
 
+    // Calculate updated balance after this request
+    const updatedBalance: LeaveBalanceInfo = {
+      allocatedDays: currentBalance.allocatedDays,
+      usedDays: currentBalance.usedDays,
+      remainingDays: currentBalance.remainingDays - dto.daysRequested,
+    };
+
     // Create the leave request
-    const leaveRequest = await this.leaveRequestRepository.create({
+    const leaveRequest = this.leaveRequestRepository.create({
       userId,
-      leaveTypeId: dto.leaveTypeId,
+      leaveType: dto.leaveType,
       startDate,
       endDate,
       daysRequested: dto.daysRequested,
@@ -95,43 +86,54 @@ export class LeaveService {
       isEmergency: dto.isEmergency || false,
       emergencyJustification: dto.emergencyJustification,
       status: LeaveRequestStatus.PENDING,
+      balanceInfo: updatedBalance,
     });
 
-    // Update pending days in balance
-    await this.leaveBalanceService.updatePendingDays(
-      userId,
-      dto.leaveTypeId,
-      year,
-      dto.daysRequested,
-      'add'
-    );
+    const savedRequest = await this.leaveRequestRepository.save(leaveRequest);
 
-    // Trigger approval workflow if required
-    if (leaveType.requiresApproval) {
-      await this.leaveApprovalService.initiateApprovalWorkflow(leaveRequest.id);
-    } else {
-      // Auto-approve if no approval required
-      await this.approveLeaveRequest(leaveRequest.id, 'system', {
+    // Auto-approve if no approval required
+    if (!leaveTypeConfig.requiresApproval) {
+      return await this.approveLeaveRequest(savedRequest.id, 'system', {
         status: LeaveRequestStatus.APPROVED,
         comments: 'Auto-approved - no approval required for this leave type',
       });
     }
 
-    return await this.leaveRequestRepository.findById(leaveRequest.id) as LeaveRequest;
+    // Send notification to manager for approval (placeholder)
+    await this.sendApprovalNotification(savedRequest);
+
+    return savedRequest;
   }
 
   /**
    * Get leave requests for a user
    */
   async getUserLeaveRequests(userId: string, limit?: number): Promise<LeaveRequest[]> {
-    return await this.leaveRequestRepository.findByUserId(userId, limit);
+    const query = this.leaveRequestRepository
+      .createQueryBuilder('request')
+      .leftJoinAndSelect('request.user', 'user')
+      .leftJoinAndSelect('request.approver', 'approver')
+      .where('request.userId = :userId', { userId })
+      .orderBy('request.createdAt', 'DESC');
+
+    if (limit) {
+      query.limit(limit);
+    }
+
+    return await query.getMany();
   }
 
   /**
    * Get leave request by ID with access validation
    */
   async getLeaveRequestById(requestId: string, userId: string): Promise<LeaveRequest> {
-    const request = await this.leaveRequestRepository.findById(requestId);
+    const request = await this.leaveRequestRepository
+      .createQueryBuilder('request')
+      .leftJoinAndSelect('request.user', 'user')
+      .leftJoinAndSelect('request.approver', 'approver')
+      .where('request.id = :requestId', { requestId })
+      .getOne();
+
     if (!request) {
       throw new NotFoundException('Leave request not found');
     }
@@ -149,7 +151,7 @@ export class LeaveService {
    * Cancel a leave request
    */
   async cancelLeaveRequest(requestId: string, userId: string): Promise<LeaveRequest> {
-    const request = await this.leaveRequestRepository.findById(requestId);
+    const request = await this.leaveRequestRepository.findOne({ where: { id: requestId } });
     if (!request) {
       throw new NotFoundException('Leave request not found');
     }
@@ -164,33 +166,16 @@ export class LeaveService {
       throw new BadRequestException('Can only cancel pending or approved leave requests');
     }
 
-    // Update request status
-    const updatedRequest = await this.leaveRequestRepository.update(requestId, {
-      status: LeaveRequestStatus.CANCELLED,
-    });
-
-    // Update leave balance - remove pending/used days
-    const year = request.startDate.getFullYear();
+    // Update request status and restore balance
+    request.status = LeaveRequestStatus.CANCELLED;
     
-    if (request.status === LeaveRequestStatus.PENDING) {
-      await this.leaveBalanceService.updatePendingDays(
-        userId,
-        request.leaveTypeId,
-        year,
-        request.daysRequested,
-        'subtract'
-      );
-    } else if (request.status === LeaveRequestStatus.APPROVED) {
-      await this.leaveBalanceService.updateUsedDays(
-        userId,
-        request.leaveTypeId,
-        year,
-        request.daysRequested,
-        'subtract'
-      );
-    }
+    // Restore the balance by adding back the requested days
+    request.balanceInfo = {
+      ...request.balanceInfo,
+      remainingDays: request.balanceInfo.remainingDays + request.daysRequested,
+    };
 
-    return updatedRequest;
+    return await this.leaveRequestRepository.save(request);
   }
 
   /**
@@ -201,7 +186,7 @@ export class LeaveService {
     approverId: string,
     approvalData: { status: LeaveRequestStatus; comments?: string; rejectionReason?: string }
   ): Promise<LeaveRequest> {
-    const request = await this.leaveRequestRepository.findById(requestId);
+    const request = await this.leaveRequestRepository.findOne({ where: { id: requestId } });
     if (!request) {
       throw new NotFoundException('Leave request not found');
     }
@@ -212,52 +197,35 @@ export class LeaveService {
 
     // Validate approver has permission (unless system approval)
     if (approverId !== 'system') {
-      const canApprove = await this.leaveApprovalService.canApproveRequest(requestId, approverId);
+      const canApprove = await this.canApproveRequest(requestId, approverId);
       if (!canApprove) {
         throw new ForbiddenException('You do not have permission to approve this leave request');
       }
     }
 
-    const year = request.startDate.getFullYear();
-
     // Update request with approval decision
-    const updateData: Partial<LeaveRequest> = {
-      status: approvalData.status,
-      approverId: approverId === 'system' ? undefined : approverId,
-      approvedAt: new Date(),
-      approvalComments: approvalData.comments,
-      rejectionReason: approvalData.rejectionReason,
-    };
+    request.status = approvalData.status;
+    request.approverId = approverId === 'system' ? undefined : approverId;
+    request.approvedAt = new Date();
+    request.approvalComments = approvalData.comments;
+    request.rejectionReason = approvalData.rejectionReason;
 
-    const updatedRequest = await this.leaveRequestRepository.update(requestId, updateData);
-
-    // Update leave balance based on decision
+    // Update balance based on decision
     if (approvalData.status === LeaveRequestStatus.APPROVED) {
-      // Move from pending to used
-      await this.leaveBalanceService.updatePendingDays(
-        request.userId,
-        request.leaveTypeId,
-        year,
-        request.daysRequested,
-        'subtract'
-      );
-      await this.leaveBalanceService.updateUsedDays(
-        request.userId,
-        request.leaveTypeId,
-        year,
-        request.daysRequested,
-        'add'
-      );
+      // Move days from remaining to used
+      request.balanceInfo = {
+        ...request.balanceInfo,
+        usedDays: request.balanceInfo.usedDays + request.daysRequested,
+      };
     } else if (approvalData.status === LeaveRequestStatus.REJECTED) {
-      // Remove from pending
-      await this.leaveBalanceService.updatePendingDays(
-        request.userId,
-        request.leaveTypeId,
-        year,
-        request.daysRequested,
-        'subtract'
-      );
+      // Restore the balance by adding back the requested days
+      request.balanceInfo = {
+        ...request.balanceInfo,
+        remainingDays: request.balanceInfo.remainingDays + request.daysRequested,
+      };
     }
+
+    const updatedRequest = await this.leaveRequestRepository.save(request);
 
     // Send notification (placeholder for future implementation)
     await this.sendLeaveDecisionNotification(updatedRequest);
@@ -269,14 +237,198 @@ export class LeaveService {
    * Get team leave requests for managers
    */
   async getTeamLeaveRequests(managerId: string, startDate?: Date, endDate?: Date): Promise<LeaveRequest[]> {
-    return await this.leaveRequestRepository.findTeamRequests(managerId, startDate, endDate);
+    // Get team member IDs from reporting structure
+    const teamMembers = await this.reportingStructureRepository.findCurrentTeamByManagerId(managerId);
+    const teamMemberIds = teamMembers.map(member => member.employeeId);
+
+    if (teamMemberIds.length === 0) {
+      return [];
+    }
+
+    const query = this.leaveRequestRepository
+      .createQueryBuilder('request')
+      .leftJoinAndSelect('request.user', 'user')
+      .leftJoinAndSelect('request.approver', 'approver')
+      .where('request.userId IN (:...teamMemberIds)', { teamMemberIds })
+      .orderBy('request.createdAt', 'DESC');
+
+    if (startDate && endDate) {
+      query.andWhere('request.startDate >= :startDate AND request.endDate <= :endDate', {
+        startDate,
+        endDate,
+      });
+    }
+
+    return await query.getMany();
   }
 
   /**
    * Get pending team leave requests for managers
    */
   async getPendingTeamRequests(managerId: string): Promise<LeaveRequest[]> {
-    return await this.leaveRequestRepository.findTeamPendingRequests(managerId);
+    // Get team member IDs from reporting structure
+    const teamMembers = await this.reportingStructureRepository.findCurrentTeamByManagerId(managerId);
+    const teamMemberIds = teamMembers.map(member => member.employeeId);
+
+    if (teamMemberIds.length === 0) {
+      return [];
+    }
+
+    return await this.leaveRequestRepository
+      .createQueryBuilder('request')
+      .leftJoinAndSelect('request.user', 'user')
+      .where('request.userId IN (:...teamMemberIds)', { teamMemberIds })
+      .andWhere('request.status = :status', { status: LeaveRequestStatus.PENDING })
+      .orderBy('request.createdAt', 'ASC')
+      .getMany();
+  }
+
+  /**
+   * Get leave type configuration
+   */
+  private getLeaveTypeConfig(leaveType: LeaveType): {
+    name: string;
+    maxDaysPerYear: number;
+    requiresApproval: boolean;
+    canCarryForward: boolean;
+    maxCarryForwardDays: number;
+    minAdvanceNoticeDays: number;
+  } {
+    const configs = {
+      [LeaveType.ANNUAL]: {
+        name: 'Annual Leave',
+        maxDaysPerYear: 25,
+        requiresApproval: true,
+        canCarryForward: true,
+        maxCarryForwardDays: 5,
+        minAdvanceNoticeDays: 7,
+      },
+      [LeaveType.SICK]: {
+        name: 'Sick Leave',
+        maxDaysPerYear: 10,
+        requiresApproval: false,
+        canCarryForward: false,
+        maxCarryForwardDays: 0,
+        minAdvanceNoticeDays: 0,
+      },
+      [LeaveType.PERSONAL]: {
+        name: 'Personal Leave',
+        maxDaysPerYear: 5,
+        requiresApproval: true,
+        canCarryForward: false,
+        maxCarryForwardDays: 0,
+        minAdvanceNoticeDays: 3,
+      },
+      [LeaveType.EMERGENCY]: {
+        name: 'Emergency Leave',
+        maxDaysPerYear: 3,
+        requiresApproval: true,
+        canCarryForward: false,
+        maxCarryForwardDays: 0,
+        minAdvanceNoticeDays: 0,
+      },
+    };
+
+    return configs[leaveType];
+  }
+
+  /**
+   * Find overlapping leave requests for a user
+   */
+  private async findOverlappingRequests(userId: string, startDate: Date, endDate: Date): Promise<LeaveRequest[]> {
+    return await this.leaveRequestRepository
+      .createQueryBuilder('request')
+      .where('request.userId = :userId', { userId })
+      .andWhere('request.status IN (:...statuses)', { 
+        statuses: [LeaveRequestStatus.PENDING, LeaveRequestStatus.APPROVED] 
+      })
+      .andWhere(
+        '(request.startDate <= :endDate AND request.endDate >= :startDate)',
+        { startDate, endDate }
+      )
+      .getMany();
+  }
+
+  /**
+   * Get user's current leave balance for a specific leave type and year
+   */
+  private async getUserLeaveBalance(userId: string, leaveType: LeaveType, year: number): Promise<LeaveBalanceInfo> {
+    const leaveTypeConfig = this.getLeaveTypeConfig(leaveType);
+    
+    // Get all approved requests for this user, leave type, and year
+    const approvedRequests = await this.leaveRequestRepository
+      .createQueryBuilder('request')
+      .where('request.userId = :userId', { userId })
+      .andWhere('request.leaveType = :leaveType', { leaveType })
+      .andWhere('request.status = :status', { status: LeaveRequestStatus.APPROVED })
+      .andWhere('EXTRACT(YEAR FROM request.startDate) = :year', { year })
+      .getMany();
+
+    // Calculate used days from approved requests
+    const usedDays = approvedRequests.reduce((total, request) => total + request.daysRequested, 0);
+
+    // Get pending requests for this leave type and year
+    const pendingRequests = await this.leaveRequestRepository
+      .createQueryBuilder('request')
+      .where('request.userId = :userId', { userId })
+      .andWhere('request.leaveType = :leaveType', { leaveType })
+      .andWhere('request.status = :status', { status: LeaveRequestStatus.PENDING })
+      .andWhere('EXTRACT(YEAR FROM request.startDate) = :year', { year })
+      .getMany();
+
+    // Calculate pending days
+    const pendingDays = pendingRequests.reduce((total, request) => total + request.daysRequested, 0);
+
+    // Calculate carry forward days (simplified - could be enhanced with actual carry forward logic)
+    const carryForwardDays = 0; // For now, no carry forward
+
+    const allocatedDays = leaveTypeConfig.maxDaysPerYear + carryForwardDays;
+    const remainingDays = allocatedDays - usedDays - pendingDays;
+
+    return {
+      allocatedDays,
+      usedDays,
+      remainingDays,
+    };
+  }
+
+  /**
+   * Check if a user can approve a specific leave request
+   */
+  private async canApproveRequest(requestId: string, approverId: string): Promise<boolean> {
+    const request = await this.leaveRequestRepository.findOne({ where: { id: requestId } });
+    if (!request) {
+      return false;
+    }
+
+    // Check if approver is the direct manager of the requester
+    const isDirectManager = await this.reportingStructureRepository.existsRelationship(
+      request.userId,
+      approverId
+    );
+
+    if (isDirectManager) {
+      return true;
+    }
+
+    // Check if approver is in the management chain (indirect manager)
+    const managementChain = await this.reportingStructureRepository.getReportingChain(request.userId);
+    return managementChain.some(manager => manager.managerId === approverId);
+  }
+
+  /**
+   * Send approval notification to manager
+   */
+  private async sendApprovalNotification(request: LeaveRequest): Promise<void> {
+    // Find the direct manager for approval
+    const manager = await this.reportingStructureRepository.findCurrentManagerByEmployeeId(request.userId);
+    
+    if (manager) {
+      // TODO: Implement notification system
+      console.log(`Approval notification sent to manager ${manager.managerId} for leave request ${request.id}`);
+    } else {
+      console.log(`No manager found for user ${request.userId}, leave request ${request.id} needs manual review`);
+    }
   }
 
   /**
@@ -310,19 +462,71 @@ export class LeaveService {
    * Get leave request statistics for a user
    */
   async getLeaveStatistics(userId: string, year: number): Promise<any> {
-    const statistics = await this.leaveRequestRepository.getRequestStatistics(userId, year);
-    const balances = await this.leaveBalanceRepository.findByUserAndYear(userId, year);
+    // Get all requests for the user in the specified year
+    const requests = await this.leaveRequestRepository
+      .createQueryBuilder('request')
+      .where('request.userId = :userId', { userId })
+      .andWhere('EXTRACT(YEAR FROM request.startDate) = :year', { year })
+      .getMany();
+
+    // Calculate statistics by status
+    const statistics = requests.reduce((stats, request) => {
+      const status = request.status.toLowerCase();
+      if (!stats[status]) {
+        stats[status] = { count: 0, totalDays: 0 };
+      }
+      stats[status].count++;
+      stats[status].totalDays += request.daysRequested;
+      return stats;
+    }, {} as Record<string, { count: number; totalDays: number }>);
+
+    // Get current balances for all leave types
+    const balances = await Promise.all(
+      Object.values(LeaveType).map(async (leaveType) => {
+        const balance = await this.getUserLeaveBalance(userId, leaveType, year);
+        const config = this.getLeaveTypeConfig(leaveType);
+        return {
+          leaveType: config.name,
+          allocated: balance.allocatedDays,
+          used: balance.usedDays,
+          remaining: balance.remainingDays,
+        };
+      })
+    );
 
     return {
       requests: statistics,
-      balances: balances.map(balance => ({
-        leaveType: balance.leaveType.name,
-        allocated: balance.allocatedDays,
-        used: balance.usedDays,
-        pending: balance.pendingDays,
-        remaining: balance.remainingDays,
-      })),
+      balances,
     };
+  }
+
+  /**
+   * Get user's leave balances for all leave types
+   */
+  async getUserLeaveBalances(userId: string, year?: number): Promise<any[]> {
+    const targetYear = year || new Date().getFullYear();
+    
+    return await Promise.all(
+      Object.values(LeaveType).map(async (leaveType) => {
+        const balance = await this.getUserLeaveBalance(userId, leaveType, targetYear);
+        const config = this.getLeaveTypeConfig(leaveType);
+        
+        return {
+          leaveType: {
+            type: leaveType,
+            name: config.name,
+            maxDaysPerYear: config.maxDaysPerYear,
+            requiresApproval: config.requiresApproval,
+            canCarryForward: config.canCarryForward,
+          },
+          year: targetYear,
+          allocatedDays: balance.allocatedDays,
+          usedDays: balance.usedDays,
+          remainingDays: balance.remainingDays,
+          totalAvailableDays: balance.allocatedDays,
+        };
+      })
+    );
   }
 
   /**
@@ -330,36 +534,25 @@ export class LeaveService {
    */
   async canRequestLeave(
     userId: string,
-    leaveTypeId: string,
+    leaveType: LeaveType,
     startDate: Date,
     endDate: Date,
     daysRequested: number
   ): Promise<{ canRequest: boolean; reason?: string }> {
-    // Check leave type
-    const leaveType = await this.leaveTypeRepository.findById(leaveTypeId);
-    if (!leaveType || !leaveType.isActive) {
-      return { canRequest: false, reason: 'Invalid or inactive leave type' };
-    }
+    // Get leave type configuration
+    const leaveTypeConfig = this.getLeaveTypeConfig(leaveType);
 
     // Check overlapping requests
-    const overlapping = await this.leaveRequestRepository.findOverlappingRequests(
-      userId,
-      startDate,
-      endDate
-    );
+    const overlapping = await this.findOverlappingRequests(userId, startDate, endDate);
     if (overlapping.length > 0) {
       return { canRequest: false, reason: 'Overlapping with existing leave request' };
     }
 
     // Check balance
     const year = startDate.getFullYear();
-    const balance = await this.leaveBalanceRepository.findByUserLeaveTypeYear(
-      userId,
-      leaveTypeId,
-      year
-    );
+    const balance = await this.getUserLeaveBalance(userId, leaveType, year);
     
-    if (balance && balance.remainingDays < daysRequested) {
+    if (balance.remainingDays < daysRequested) {
       return { 
         canRequest: false, 
         reason: `Insufficient balance. Available: ${balance.remainingDays} days` 
@@ -370,10 +563,10 @@ export class LeaveService {
     const today = new Date();
     const daysDifference = Math.ceil((startDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     
-    if (daysDifference < leaveType.minAdvanceNoticeDays) {
+    if (daysDifference < leaveTypeConfig.minAdvanceNoticeDays) {
       return { 
         canRequest: false, 
-        reason: `Requires ${leaveType.minAdvanceNoticeDays} days advance notice` 
+        reason: `Requires ${leaveTypeConfig.minAdvanceNoticeDays} days advance notice` 
       };
     }
 

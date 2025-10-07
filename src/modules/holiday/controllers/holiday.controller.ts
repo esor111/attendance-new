@@ -13,16 +13,14 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
 import { HolidayService } from '../services/holiday.service';
-import { HolidayCalendarService } from '../services/holiday-calendar.service';
 import { CreateHolidayDto } from '../dto/create-holiday.dto';
 import { UpdateHolidayDto } from '../dto/update-holiday.dto';
 import { HolidayQueryDto } from '../dto/holiday-query.dto';
 import { Holiday } from '../entities/holiday.entity';
-import { HolidayCalendar } from '../entities/holiday-calendar.entity';
 
 /**
  * Holiday Controller - Handles HTTP requests for holiday management
- * Provides endpoints for CRUD operations, calendar generation, and holiday queries
+ * Provides endpoints for CRUD operations and holiday queries using real-time calculation
  * Includes admin-only endpoints for holiday creation and management
  */
 @Controller('api/holidays')
@@ -30,7 +28,6 @@ import { HolidayCalendar } from '../entities/holiday-calendar.entity';
 export class HolidayController {
   constructor(
     private readonly holidayService: HolidayService,
-    private readonly holidayCalendarService: HolidayCalendarService,
   ) {}
 
   /**
@@ -83,32 +80,15 @@ export class HolidayController {
   }
 
   /**
-   * Get yearly holiday calendar
-   * GET /api/holidays/calendar/:year
+   * Get yearly holiday calendar using real-time calculation
+   * GET /api/holidays/year/:year
    */
-  @Get('calendar/:year')
-  async getYearlyCalendar(
+  @Get('year/:year')
+  async getYearlyHolidays(
     @Param('year', ParseIntPipe) year: number,
     @Query('departmentId') departmentId?: string,
-  ): Promise<HolidayCalendar[]> {
-    // Generate calendar if it doesn't exist
-    const existingCalendar = await this.holidayCalendarService.getCalendarForYear(year, departmentId);
-    
-    if (existingCalendar.length === 0) {
-      await this.holidayCalendarService.generateCalendarForYear(year);
-      return this.holidayCalendarService.getCalendarForYear(year, departmentId);
-    }
-
-    return existingCalendar;
-  }
-
-  /**
-   * Generate calendar for a specific year (admin only)
-   * POST /api/holidays/calendar/:year/generate
-   */
-  @Post('calendar/:year/generate')
-  async generateCalendar(@Param('year', ParseIntPipe) year: number): Promise<HolidayCalendar[]> {
-    return this.holidayCalendarService.generateCalendarForYear(year);
+  ): Promise<Array<Holiday & { actualDate: Date }>> {
+    return this.holidayService.getHolidaysForYear(year, departmentId);
   }
 
   /**

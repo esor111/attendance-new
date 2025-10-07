@@ -18,7 +18,6 @@ describe('HolidayService', () => {
     findByDate: jest.fn(),
     findByType: jest.fn(),
     findByDepartment: jest.fn(),
-    isHoliday: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -57,13 +56,13 @@ describe('HolidayService', () => {
         date: new Date('2025-01-01'),
       };
 
-      repository.findByDate.mockResolvedValue([]);
+      repository.find.mockResolvedValue([]);
       repository.create.mockReturnValue(mockHoliday as any);
       repository.save.mockResolvedValue(mockHoliday as any);
 
       const result = await service.createHoliday(createDto);
 
-      expect(repository.findByDate).toHaveBeenCalledWith(new Date('2025-01-01'), undefined);
+      expect(repository.find).toHaveBeenCalled();
       expect(repository.create).toHaveBeenCalledWith({
         ...createDto,
         date: new Date('2025-01-01'),
@@ -112,9 +111,12 @@ describe('HolidayService', () => {
         id: 'existing-uuid',
         name: 'New Year',
         date: new Date('2025-01-01'),
+        type: HolidayType.COMPANY,
+        recurrence: RecurrenceType.YEARLY,
+        isActive: true,
       };
 
-      repository.findByDate.mockResolvedValue([existingHoliday as any]);
+      repository.find.mockResolvedValue([existingHoliday as any]);
 
       await expect(service.createHoliday(createDto)).rejects.toThrow(ConflictException);
       await expect(service.createHoliday(createDto)).rejects.toThrow(
@@ -173,32 +175,60 @@ describe('HolidayService', () => {
   describe('isHoliday', () => {
     it('should return true for a holiday date', async () => {
       const testDate = new Date('2025-01-01');
-      repository.isHoliday.mockResolvedValue(true);
+      const mockHoliday = {
+        id: 'holiday-uuid',
+        name: 'New Year',
+        date: new Date('2025-01-01'),
+        type: HolidayType.COMPANY,
+        recurrence: RecurrenceType.YEARLY,
+        isActive: true,
+      };
+
+      repository.find.mockResolvedValue([mockHoliday as any]);
 
       const result = await service.isHoliday(testDate);
 
-      expect(repository.isHoliday).toHaveBeenCalledWith(testDate, undefined);
+      expect(repository.find).toHaveBeenCalledWith({
+        where: { isActive: true },
+        relations: ['department'],
+      });
       expect(result).toBe(true);
     });
 
     it('should return false for a non-holiday date', async () => {
       const testDate = new Date('2025-01-02');
-      repository.isHoliday.mockResolvedValue(false);
+      repository.find.mockResolvedValue([]);
 
       const result = await service.isHoliday(testDate);
 
-      expect(repository.isHoliday).toHaveBeenCalledWith(testDate, undefined);
+      expect(repository.find).toHaveBeenCalledWith({
+        where: { isActive: true },
+        relations: ['department'],
+      });
       expect(result).toBe(false);
     });
 
     it('should check holidays with department filtering', async () => {
       const testDate = new Date('2025-01-01');
       const departmentId = 'dept-uuid';
-      repository.isHoliday.mockResolvedValue(true);
+      const mockHoliday = {
+        id: 'holiday-uuid',
+        name: 'Department Holiday',
+        date: new Date('2025-01-01'),
+        type: HolidayType.DEPARTMENT,
+        departmentId: departmentId,
+        recurrence: RecurrenceType.NONE,
+        isActive: true,
+      };
+
+      repository.find.mockResolvedValue([mockHoliday as any]);
 
       const result = await service.isHoliday(testDate, departmentId);
 
-      expect(repository.isHoliday).toHaveBeenCalledWith(testDate, departmentId);
+      expect(repository.find).toHaveBeenCalledWith({
+        where: { isActive: true },
+        relations: ['department'],
+      });
       expect(result).toBe(true);
     });
   });

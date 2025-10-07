@@ -1,13 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HolidayController } from './holiday.controller';
 import { HolidayService } from '../services/holiday.service';
-import { HolidayCalendarService } from '../services/holiday-calendar.service';
 import { HolidayType, RecurrenceType } from '../entities/holiday.entity';
 
 describe('HolidayController', () => {
   let controller: HolidayController;
   let holidayService: jest.Mocked<HolidayService>;
-  let calendarService: jest.Mocked<HolidayCalendarService>;
 
   const mockHolidayService = {
     createHoliday: jest.fn(),
@@ -17,11 +15,7 @@ describe('HolidayController', () => {
     deleteHoliday: jest.fn(),
     isHoliday: jest.fn(),
     getHolidaysByDate: jest.fn(),
-  };
-
-  const mockCalendarService = {
-    getCalendarForYear: jest.fn(),
-    generateCalendarForYear: jest.fn(),
+    getHolidaysForYear: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -32,16 +26,11 @@ describe('HolidayController', () => {
           provide: HolidayService,
           useValue: mockHolidayService,
         },
-        {
-          provide: HolidayCalendarService,
-          useValue: mockCalendarService,
-        },
       ],
     }).compile();
 
     controller = module.get<HolidayController>(HolidayController);
     holidayService = module.get(HolidayService);
-    calendarService = module.get(HolidayCalendarService);
   });
 
   afterEach(() => {
@@ -100,51 +89,48 @@ describe('HolidayController', () => {
     });
   });
 
-  describe('getYearlyCalendar', () => {
-    it('should return existing calendar for year', async () => {
+  describe('getYearlyHolidays', () => {
+    it('should return holidays for year with real-time calculation', async () => {
       const year = 2025;
       const departmentId = 'dept-uuid';
 
-      const mockCalendar = [
+      const mockYearlyHolidays = [
         {
-          id: 'calendar-1',
-          year: 2025,
+          id: 'holiday-1',
+          name: 'New Year',
+          date: new Date('2025-01-01'),
+          type: HolidayType.COMPANY,
           actualDate: new Date('2025-01-01'),
-          holiday: { name: 'New Year' },
         },
       ];
 
-      calendarService.getCalendarForYear.mockResolvedValue(mockCalendar as any);
+      holidayService.getHolidaysForYear.mockResolvedValue(mockYearlyHolidays as any);
 
-      const result = await controller.getYearlyCalendar(year, departmentId);
+      const result = await controller.getYearlyHolidays(year, departmentId);
 
-      expect(calendarService.getCalendarForYear).toHaveBeenCalledWith(year, departmentId);
-      expect(result).toEqual(mockCalendar);
+      expect(holidayService.getHolidaysForYear).toHaveBeenCalledWith(year, departmentId);
+      expect(result).toEqual(mockYearlyHolidays);
     });
 
-    it('should generate calendar if none exists', async () => {
+    it('should return holidays for year without department filtering', async () => {
       const year = 2025;
 
-      const mockGeneratedCalendar = [
+      const mockYearlyHolidays = [
         {
-          id: 'calendar-1',
-          year: 2025,
+          id: 'holiday-1',
+          name: 'New Year',
+          date: new Date('2025-01-01'),
+          type: HolidayType.NATIONAL,
           actualDate: new Date('2025-01-01'),
-          holiday: { name: 'New Year' },
         },
       ];
 
-      calendarService.getCalendarForYear
-        .mockResolvedValueOnce([]) // First call returns empty
-        .mockResolvedValueOnce(mockGeneratedCalendar as any); // Second call returns generated calendar
+      holidayService.getHolidaysForYear.mockResolvedValue(mockYearlyHolidays as any);
 
-      calendarService.generateCalendarForYear.mockResolvedValue(mockGeneratedCalendar as any);
+      const result = await controller.getYearlyHolidays(year);
 
-      const result = await controller.getYearlyCalendar(year);
-
-      expect(calendarService.getCalendarForYear).toHaveBeenCalledTimes(2);
-      expect(calendarService.generateCalendarForYear).toHaveBeenCalledWith(year);
-      expect(result).toEqual(mockGeneratedCalendar);
+      expect(holidayService.getHolidaysForYear).toHaveBeenCalledWith(year, undefined);
+      expect(result).toEqual(mockYearlyHolidays);
     });
   });
 

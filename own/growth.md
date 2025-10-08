@@ -48,3 +48,7 @@ and create a new dbml file take a referance form database-diagram.dbml
 ✅ Update the existing DBML file with current structure
 ✅ Use existing database-diagram.dbml as reference
 ---
+
+
+
+what is the exact taks we are doing before what is the context you have last conversation  

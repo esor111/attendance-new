@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AttendanceController } from './controllers/attendance.controller';
 import { EntityAccessController } from './controllers/entity-access.controller';
-import { ReportingController } from './controllers/reporting.controller';
 import { RemoteWorkController } from './controllers/remote-work.controller';
 import { AttendanceRequestController } from './controllers/attendance-request.controller';
 import { UserScheduleController } from './controllers/user-schedule.controller';
@@ -14,7 +13,6 @@ import { FraudDetectionService } from './services/fraud-detection.service';
 import { TransactionManagerService } from './services/transaction-manager.service';
 import { AttendanceValidationService } from './services/attendance-validation.service';
 import { EntityAccessService } from './services/entity-access.service';
-import { ReportingService } from './services/reporting.service';
 import { RemoteWorkService } from './services/remote-work.service';
 import { AttendanceRequestService } from './services/attendance-request.service';
 import { RequestService } from './services/request.service';
@@ -76,7 +74,6 @@ import { DepartmentEntityAssignment } from '../department/entities/department-en
   controllers: [
     AttendanceController, 
     EntityAccessController, 
-    ReportingController, 
     RemoteWorkController, 
     AttendanceRequestController, 
     UserScheduleController,
@@ -90,7 +87,6 @@ import { DepartmentEntityAssignment } from '../department/entities/department-en
     TransactionManagerService,
     AttendanceValidationService,
     EntityAccessService,
-    ReportingService,
     RemoteWorkService,
     AttendanceRequestService,
     RequestService, // New unified request service
@@ -111,7 +107,6 @@ import { DepartmentEntityAssignment } from '../department/entities/department-en
     TransactionManagerService,
     AttendanceValidationService,
     EntityAccessService,
-    ReportingService,
     RemoteWorkService,
     AttendanceRequestService,
     RequestService, // New unified request service

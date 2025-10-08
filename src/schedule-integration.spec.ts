@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AttendanceService } from './modules/attendance/services/attendance.service';
 import { DepartmentScheduleService } from './modules/department/services/department-schedule.service';
 import { FraudDetectionService } from './modules/attendance/services/fraud-detection.service';
-import { ReportingService } from './modules/attendance/services/reporting.service';
 
 /**
  * Simple unit tests to verify schedule integration functionality
@@ -11,7 +10,6 @@ describe('Schedule Integration Tests', () => {
   let attendanceService: AttendanceService;
   let departmentScheduleService: DepartmentScheduleService;
   let fraudDetectionService: FraudDetectionService;
-  let reportingService: ReportingService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -39,20 +37,12 @@ describe('Schedule Integration Tests', () => {
             analyzeClockInLocation: jest.fn(),
           },
         },
-        {
-          provide: ReportingService,
-          useValue: {
-            getTeamAttendanceSummary: jest.fn(),
-            calculateScheduleCompliance: jest.fn(),
-          },
-        },
       ],
     }).compile();
 
     attendanceService = module.get<AttendanceService>(AttendanceService);
     departmentScheduleService = module.get<DepartmentScheduleService>(DepartmentScheduleService);
     fraudDetectionService = module.get<FraudDetectionService>(FraudDetectionService);
-    reportingService = module.get<ReportingService>(ReportingService);
   });
 
   describe('Department Schedule Validation', () => {
@@ -128,7 +118,6 @@ describe('Schedule Integration Tests', () => {
       expect(attendanceService).toBeDefined();
       expect(departmentScheduleService).toBeDefined();
       expect(fraudDetectionService).toBeDefined();
-      expect(reportingService).toBeDefined();
     });
   });
 });

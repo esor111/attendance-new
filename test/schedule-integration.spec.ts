@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AttendanceService } from '../src/modules/attendance/services/attendance.service';
 import { DepartmentScheduleService } from '../src/modules/department/services/department-schedule.service';
 import { FraudDetectionService } from '../src/modules/attendance/services/fraud-detection.service';
-import { ReportingService } from '../src/modules/attendance/services/reporting.service';
 
 /**
  * Simple unit tests to verify schedule integration functionality
@@ -11,7 +10,6 @@ describe('Schedule Integration Tests', () => {
   let attendanceService: AttendanceService;
   let departmentScheduleService: DepartmentScheduleService;
   let fraudDetectionService: FraudDetectionService;
-  let reportingService: ReportingService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -39,20 +37,12 @@ describe('Schedule Integration Tests', () => {
             analyzeClockInLocation: jest.fn(),
           },
         },
-        {
-          provide: ReportingService,
-          useValue: {
-            getTeamAttendanceSummary: jest.fn(),
-            calculateScheduleCompliance: jest.fn(),
-          },
-        },
       ],
     }).compile();
 
     attendanceService = module.get<AttendanceService>(AttendanceService);
     departmentScheduleService = module.get<DepartmentScheduleService>(DepartmentScheduleService);
     fraudDetectionService = module.get<FraudDetectionService>(FraudDetectionService);
-    reportingService = module.get<ReportingService>(ReportingService);
   });
 
   describe('Department Schedule Validation', () => {
@@ -135,62 +125,6 @@ describe('Schedule Integration Tests', () => {
       expect(result.isCompliant).toBe(false);
       expect(result.flagReason).toContain('Outside department working hours');
       expect(fraudDetectionService.checkDepartmentScheduleCompliance).toHaveBeenCalledWith('user-123', testTime);
-    });
-  });
-
-  describe('Reporting Integration', () => {
-    it('should include schedule compliance in team reports', async () => {
-      const startDate = new Date('2025-01-01');
-      const endDate = new Date('2025-01-31');
-
-      const mockReport = {
-        teamMembers: [],
-        statistics: {
-          totalDays: 20,
-          presentDays: 18,
-          absentDays: 2,
-          lateDays: 3,
-          flaggedDays: 1,
-        },
-        teamMemberStats: [
-          {
-            userId: 'user-123',
-            userName: 'Test User',
-            presentDays: 18,
-            absentDays: 2,
-            lateDays: 3,
-            flaggedDays: 1,
-            averageHours: 8.2,
-            scheduleCompliance: {
-              compliantDays: 15,
-              nonCompliantDays: 3,
-              complianceRate: 83,
-            },
-          },
-        ],
-        attendanceRequests: {
-          total: 5,
-          pending: 1,
-          approved: 3,
-          rejected: 1,
-          approvalRate: 75,
-        },
-        scheduleCompliance: {
-          totalCompliantDays: 15,
-          totalNonCompliantDays: 3,
-          overallComplianceRate: 83,
-        },
-      };
-
-      jest.spyOn(reportingService, 'getTeamAttendanceSummary')
-        .mockResolvedValue(mockReport);
-
-      const result = await reportingService.getTeamAttendanceSummary('manager-123', startDate, endDate);
-
-      expect(result.scheduleCompliance).toBeDefined();
-      expect(result.scheduleCompliance.overallComplianceRate).toBe(83);
-      expect(result.teamMemberStats[0].scheduleCompliance).toBeDefined();
-      expect(result.teamMemberStats[0].scheduleCompliance.complianceRate).toBe(83);
     });
   });
 

@@ -5,6 +5,104 @@
 // Base Entity Fields (inherited by all tables)
 // All tables have: id (uuid, primary key), created_at (timestamp), updated_at (timestamp)
 
+// ===== AUTHENTICATION & AUTHORIZATION =====
+
+Table roles {
+  id uuid [primary key]
+  name varchar(50) [unique, not null]
+  display_name varchar(100) [not null]
+  description text
+  level integer [default: 5, note: '1=highest (SUPER_ADMIN), 5=lowest (EMPLOYEE)']
+  is_system_role boolean [default: false]
+  is_active boolean [default: true]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  
+  indexes {
+    name [name: 'idx_role_name']
+    level [name: 'idx_role_level']
+  }
+}
+
+Table permissions {
+  id uuid [primary key]
+  name varchar(100) [unique, not null, note: 'e.g., REQUEST:APPROVE:TEAM']
+  display_name varchar(150) [not null]
+  description text
+  resource varchar(50) [not null, note: 'e.g., REQUEST, USER, REPORT, ATTENDANCE']
+  action varchar(50) [not null, note: 'e.g., CREATE, READ, UPDATE, DELETE, APPROVE']
+  scope varchar(50) [not null, note: 'e.g., OWN, TEAM, DEPARTMENT, ALL']
+  is_active boolean [default: true]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  
+  indexes {
+    name [name: 'idx_permission_name']
+    (resource, action) [name: 'idx_permission_resource_action']
+    scope [name: 'idx_permission_scope']
+  }
+}
+
+Table role_permissions {
+  id uuid [primary key]
+  role_id uuid [not null]
+  permission_id uuid [not null]
+  is_granted boolean [default: true, note: 'true = granted, false = explicitly denied']
+  granted_at timestamp [default: 'CURRENT_TIMESTAMP']
+  granted_by uuid [note: 'Who granted/denied this permission']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  
+  indexes {
+    role_id [name: 'idx_role_permissions_role']
+    permission_id [name: 'idx_role_permissions_permission']
+    is_granted [name: 'idx_role_permissions_granted']
+  }
+}
+
+Table user_roles {
+  id uuid [primary key]
+  user_id uuid [not null]
+  role_id uuid [not null]
+  entity_id uuid [note: 'Scope role to specific entity (optional)']
+  assigned_at timestamp [default: 'CURRENT_TIMESTAMP']
+  assigned_by uuid [note: 'Who assigned this role']
+  expires_at timestamp [note: 'null = permanent assignment']
+  is_active boolean [default: true]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  
+  indexes {
+    user_id [name: 'idx_user_roles_user']
+    role_id [name: 'idx_user_roles_role']
+    entity_id [name: 'idx_user_roles_entity']
+    is_active [name: 'idx_user_roles_active']
+    (assigned_at, expires_at) [name: 'idx_user_roles_dates']
+  }
+}
+
+Table entity_role_permissions {
+  id uuid [primary key]
+  entity_id uuid [not null]
+  role_id uuid [not null]
+  permission_id uuid [not null]
+  is_granted boolean [default: true, note: 'true = granted, false = explicitly denied']
+  granted_at timestamp [default: 'CURRENT_TIMESTAMP']
+  granted_by uuid [note: 'Who granted/denied this permission']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  
+  indexes {
+    entity_id [name: 'idx_entity_role_permissions_entity']
+    role_id [name: 'idx_entity_role_permissions_role']
+    permission_id [name: 'idx_entity_role_permissions_permission']
+    is_granted [name: 'idx_entity_role_permissions_granted']
+    (entity_id, role_id, permission_id) [name: 'idx_entity_role_permissions_composite']
+  }
+}
+
+// ===== CORE ENTITIES =====
+
 Table users {
   id uuid [primary key]
   name varchar(255) [not null]
@@ -31,6 +129,21 @@ Table departments {
   }
 }
 
+Table entities {
+  id uuid [primary key]
+  name varchar(255) [not null]
+  kaha_id varchar(100) [unique, not null, note: 'Unique business location identifier']
+  geohash varchar(12) [not null, note: 'For efficient proximity pre-filtering']
+  address text
+  location geography [not null, note: 'PostGIS Point for precise location (SRID 4326)']
+  radius_meters integer [default: 100, note: 'Check-in radius in meters']
+  avatar_url text
+  cover_image_url text
+  description text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
 Table department_schedules {
   id uuid [primary key]
   department_id uuid [not null]
@@ -49,20 +162,7 @@ Table department_schedules {
   }
 }
 
-Table entities {
-  id uuid [primary key]
-  name varchar(255) [not null]
-  kaha_id varchar(100) [unique, not null, note: 'Unique business location identifier']
-  geohash varchar(12) [not null, note: 'For efficient proximity pre-filtering']
-  address text
-  location geography [not null, note: 'PostGIS Point for precise location (SRID 4326)']
-  radius_meters integer [default: 100, note: 'Check-in radius in meters']
-  avatar_url text
-  cover_image_url text
-  description text
-  created_at timestamp [not null]
-  updated_at timestamp [not null]
-}
+// ===== ASSIGNMENTS & RELATIONSHIPS =====
 
 Table department_entity_assignments {
   id uuid [primary key]
@@ -93,6 +193,24 @@ Table user_entity_assignments {
   }
 }
 
+Table reporting_structure {
+  id uuid [primary key]
+  employee_id uuid [not null]
+  manager_id uuid [not null]
+  start_date date [not null]
+  end_date date
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  
+  indexes {
+    employee_id [name: 'idx_reporting_structure_employee']
+    manager_id [name: 'idx_reporting_structure_manager']
+    (start_date, end_date) [name: 'idx_reporting_structure_dates']
+  }
+}
+
+// ===== ATTENDANCE TRACKING =====
+
 Table daily_attendance {
   id uuid [primary key]
   user_id uuid [not null]
@@ -111,7 +229,7 @@ Table daily_attendance {
   total_hours decimal(5,2)
   status varchar(20) [default: 'Present']
   notes text
-  work_location varchar(20) [default: 'OFFICE', note: 'OFFICE, REMOTE, FIELD']
+  work_location enum [default: 'OFFICE', note: 'OFFICE, REMOTE, FIELD']
   remote_location varchar(255)
   is_remote_approved boolean [default: false]
   remote_approver_id uuid
@@ -180,19 +298,30 @@ Table location_logs {
   }
 }
 
-Table reporting_structure {
+// ===== REQUEST MANAGEMENT =====
+
+Table requests {
   id uuid [primary key]
-  employee_id uuid [not null]
-  manager_id uuid [not null]
-  start_date date [not null]
-  end_date date
+  user_id uuid [not null]
+  type enum [not null, note: 'LEAVE, REMOTE_WORK, ATTENDANCE_CORRECTION']
+  request_data json [not null, note: 'Type-specific data (LeaveRequestData | RemoteWorkRequestData | AttendanceCorrectionRequestData)']
+  status enum [default: 'PENDING', note: 'PENDING, APPROVED, REJECTED, CANCELLED']
+  approver_id uuid
+  approved_at timestamp
+  approval_notes text
+  rejection_reason text
+  requested_at timestamp [not null]
+  notes text
+  created_attendance_id uuid [note: 'For attendance correction requests']
   created_at timestamp [not null]
   updated_at timestamp [not null]
   
   indexes {
-    employee_id [name: 'idx_reporting_structure_employee']
-    manager_id [name: 'idx_reporting_structure_manager']
-    (start_date, end_date) [name: 'idx_reporting_structure_dates']
+    (user_id, type) [name: 'idx_request_user_type']
+    status [name: 'idx_request_status']
+    approver_id [name: 'idx_request_approver']
+    type [name: 'idx_request_type']
+    created_at [name: 'idx_request_created']
   }
 }
 
@@ -202,7 +331,7 @@ Table remote_work_requests {
   requested_date date [not null]
   reason varchar(500) [not null]
   remote_location varchar(255) [not null]
-  status varchar(20) [default: 'PENDING', note: 'PENDING, APPROVED, REJECTED, CANCELLED']
+  status enum [default: 'PENDING', note: 'PENDING, APPROVED, REJECTED, CANCELLED']
   approver_id uuid
   approved_at timestamp
   approval_notes text
@@ -223,7 +352,7 @@ Table attendance_requests {
   user_id uuid [not null]
   requested_date date [not null]
   reason text [not null]
-  status varchar(20) [default: 'PENDING', note: 'PENDING, APPROVED, REJECTED']
+  status enum [default: 'PENDING', note: 'PENDING, APPROVED, REJECTED']
   approver_id uuid
   approval_date timestamp
   approval_notes text
@@ -240,35 +369,24 @@ Table attendance_requests {
   }
 }
 
-Table leave_types {
-  id uuid [primary key]
-  name varchar(100) [unique, not null]
-  description text
-  max_days_per_year integer [not null]
-  requires_approval boolean [default: true]
-  can_carry_forward boolean [default: false]
-  max_carry_forward_days integer [default: 0]
-  min_advance_notice_days integer [default: 0]
-  is_active boolean [default: true]
-  created_at timestamp [not null]
-  updated_at timestamp [not null]
-}
+// ===== LEAVE MANAGEMENT =====
 
 Table leave_requests {
   id uuid [primary key]
   user_id uuid [not null]
-  leave_type_id uuid [not null]
+  leave_type enum [not null, note: 'ANNUAL, SICK, PERSONAL, EMERGENCY']
   start_date date [not null]
   end_date date [not null]
   days_requested decimal(3,1) [not null]
   reason text
-  status varchar(20) [default: 'PENDING', note: 'PENDING, APPROVED, REJECTED, CANCELLED']
+  status enum [default: 'PENDING', note: 'PENDING, APPROVED, REJECTED, CANCELLED']
   approver_id uuid
   approved_at timestamp
   approval_comments text
   rejection_reason text
   is_emergency boolean [default: false]
   emergency_justification text
+  balance_info json [not null, note: 'LeaveBalanceInfo: {allocatedDays, usedDays, remainingDays}']
   created_at timestamp [not null]
   updated_at timestamp [not null]
   
@@ -276,33 +394,18 @@ Table leave_requests {
     (user_id, start_date, end_date) [name: 'idx_leave_request_user_dates']
     status [name: 'idx_leave_request_status']
     approver_id [name: 'idx_leave_request_approver']
+    leave_type [name: 'idx_leave_request_type']
   }
 }
 
-Table leave_balances {
-  id uuid [primary key]
-  user_id uuid [not null]
-  leave_type_id uuid [not null]
-  year integer [not null]
-  allocated_days decimal(4,1) [default: 0]
-  used_days decimal(4,1) [default: 0]
-  carried_forward_days decimal(4,1) [default: 0]
-  pending_days decimal(4,1) [default: 0]
-  created_at timestamp [not null]
-  updated_at timestamp [not null]
-  
-  indexes {
-    (user_id, leave_type_id, year) [unique, name: 'unique_user_leave_type_year']
-    (user_id, year) [name: 'idx_leave_balance_user_year']
-  }
-}
+// ===== HOLIDAY MANAGEMENT =====
 
 Table holidays {
   id uuid [primary key]
   name varchar(100) [not null]
   date date [not null]
-  type varchar(20) [default: 'COMPANY', note: 'NATIONAL, COMPANY, DEPARTMENT']
-  recurrence varchar(20) [default: 'NONE', note: 'NONE, YEARLY, MONTHLY']
+  type enum [default: 'COMPANY', note: 'NATIONAL, COMPANY, DEPARTMENT']
+  recurrence enum [default: 'NONE', note: 'NONE, YEARLY, MONTHLY']
   department_id uuid
   description text
   is_active boolean [default: true]
@@ -316,25 +419,24 @@ Table holidays {
   }
 }
 
-Table holiday_calendars {
-  id uuid [primary key]
-  holiday_id uuid [not null]
-  year integer [not null]
-  department_id uuid
-  actual_date date [not null]
-  created_at timestamp [not null]
-  updated_at timestamp [not null]
-  
-  indexes {
-    year [name: 'idx_holiday_calendar_year']
-    department_id [name: 'idx_holiday_calendar_department']
-    (holiday_id, year, department_id) [unique, name: 'unique_holiday_year_department']
-  }
-}
+// ===== RELATIONSHIPS =====
 
-// Relationships
+// Authentication & Authorization relationships
+Ref: role_permissions.role_id > roles.id
+Ref: role_permissions.permission_id > permissions.id
+Ref: role_permissions.granted_by > users.id
 
-// User relationships
+Ref: user_roles.user_id > users.id
+Ref: user_roles.role_id > roles.id
+Ref: user_roles.entity_id > entities.id
+Ref: user_roles.assigned_by > users.id
+
+Ref: entity_role_permissions.entity_id > entities.id
+Ref: entity_role_permissions.role_id > roles.id
+Ref: entity_role_permissions.permission_id > permissions.id
+Ref: entity_role_permissions.granted_by > users.id
+
+// Core Entity relationships
 Ref: users.department_id > departments.id
 
 // Department relationships
@@ -342,45 +444,38 @@ Ref: department_schedules.department_id > departments.id
 Ref: department_entity_assignments.department_id > departments.id
 Ref: department_entity_assignments.entity_id > entities.id
 
-// User-Entity assignments
+// Assignment relationships
 Ref: user_entity_assignments.user_id > users.id
 Ref: user_entity_assignments.entity_id > entities.id
 
-// Daily Attendance relationships
+Ref: reporting_structure.employee_id > users.id
+Ref: reporting_structure.manager_id > users.id
+
+// Attendance relationships
 Ref: daily_attendance.user_id > users.id
 Ref: daily_attendance.entity_id > entities.id
 Ref: daily_attendance.remote_approver_id > users.id
 
-// Attendance Sessions relationships
 Ref: attendance_sessions.attendance_id > daily_attendance.id
 
-// Location Logs relationships
 Ref: location_logs.attendance_id > daily_attendance.id
 Ref: location_logs.entity_id > entities.id
 
-// Reporting Structure relationships
-Ref: reporting_structure.employee_id > users.id
-Ref: reporting_structure.manager_id > users.id
+// Request relationships
+Ref: requests.user_id > users.id
+Ref: requests.approver_id > users.id
+Ref: requests.created_attendance_id > daily_attendance.id
 
-// Remote Work Request relationships
 Ref: remote_work_requests.user_id > users.id
 Ref: remote_work_requests.approver_id > users.id
 
-// Attendance Request relationships
 Ref: attendance_requests.user_id > users.id
 Ref: attendance_requests.approver_id > users.id
 Ref: attendance_requests.created_attendance_id > daily_attendance.id
 
-// Leave Request relationships
+// Leave relationships
 Ref: leave_requests.user_id > users.id
-Ref: leave_requests.leave_type_id > leave_types.id
 Ref: leave_requests.approver_id > users.id
-
-// Leave Balance relationships
-Ref: leave_balances.user_id > users.id
-Ref: leave_balances.leave_type_id > leave_types.id
 
 // Holiday relationships
 Ref: holidays.department_id > departments.id
-Ref: holiday_calendars.holiday_id > holidays.id
-Ref: holiday_calendars.department_id > departments.id

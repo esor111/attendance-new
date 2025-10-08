@@ -35,3 +35,17 @@ I need entity-specific role permissions where:
 - Behavior: [inherit + add, or completely override base permissions]
 - Conflict resolution: [entity-specific wins, or explicit priority system]
 ------------
+
+
+----
+we have updated table enities relations node and so on So far
+
+i want you to scan the codebae see all the entites and relations
+
+and create a new dbml file take a referance form database-diagram.dbml
+----
+✅ Need to scan codebase for all entities and relationships
+✅ Update the existing DBML file with current structure
+✅ Use existing database-diagram.dbml as reference
+---
+

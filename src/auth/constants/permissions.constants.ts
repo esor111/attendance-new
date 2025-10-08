@@ -1,0 +1,307 @@
+/**
+ * Permission Constants - Centralized permission definitions
+ * Format: RESOURCE:ACTION:SCOPE
+ */
+
+// Resource Types
+export enum Resource {
+  REQUEST = 'REQUEST',
+  ATTENDANCE = 'ATTENDANCE',
+  LEAVE = 'LEAVE',
+  REPORT = 'REPORT',
+  USER = 'USER',
+  ENTITY = 'ENTITY',
+  DEPARTMENT = 'DEPARTMENT',
+  HOLIDAY = 'HOLIDAY',
+  ROLE = 'ROLE',
+  PERMISSION = 'PERMISSION',
+  SYSTEM = 'SYSTEM',
+}
+
+// Action Types
+export enum Action {
+  CREATE = 'CREATE',
+  READ = 'READ',
+  UPDATE = 'UPDATE',
+  DELETE = 'DELETE',
+  VIEW = 'VIEW',
+  APPROVE = 'APPROVE',
+  REJECT = 'REJECT',
+  CANCEL = 'CANCEL',
+  EXPORT = 'EXPORT',
+  MANAGE = 'MANAGE',
+  ASSIGN = 'ASSIGN',
+  ADMIN = 'ADMIN',
+  SUPER_ADMIN = 'SUPER_ADMIN',
+}
+
+// Scope Types
+export enum Scope {
+  OWN = 'OWN',           // Own records only
+  TEAM = 'TEAM',         // Team members (if manager)
+  DEPARTMENT = 'DEPARTMENT', // Department level
+  ALL = 'ALL',           // System-wide
+}
+
+// Role Definitions
+export enum RoleName {
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  ADMIN = 'ADMIN',
+  HR = 'HR',
+  MANAGER = 'MANAGER',
+  EMPLOYEE = 'EMPLOYEE',
+}
+
+/**
+ * Predefined Permissions
+ */
+export const PERMISSIONS = {
+  // Request Management
+  CREATE_REQUESTS: 'REQUEST:CREATE:OWN',
+  VIEW_OWN_REQUESTS: 'REQUEST:VIEW:OWN',
+  VIEW_TEAM_REQUESTS: 'REQUEST:VIEW:TEAM',
+  VIEW_ALL_REQUESTS: 'REQUEST:VIEW:ALL',
+  APPROVE_REQUESTS: 'REQUEST:APPROVE:TEAM',
+  REJECT_REQUESTS: 'REQUEST:REJECT:TEAM',
+  CANCEL_REQUESTS: 'REQUEST:CANCEL:OWN',
+  DELETE_REQUESTS: 'REQUEST:DELETE:TEAM',
+
+  // Attendance Management
+  CLOCK_IN: 'ATTENDANCE:CREATE:OWN',
+  CLOCK_OUT: 'ATTENDANCE:UPDATE:OWN',
+  VIEW_OWN_ATTENDANCE: 'ATTENDANCE:VIEW:OWN',
+  VIEW_TEAM_ATTENDANCE: 'ATTENDANCE:VIEW:TEAM',
+  VIEW_ALL_ATTENDANCE: 'ATTENDANCE:VIEW:ALL',
+  MANAGE_ATTENDANCE: 'ATTENDANCE:MANAGE:TEAM',
+  EXPORT_ATTENDANCE: 'ATTENDANCE:EXPORT:TEAM',
+
+  // Leave Management
+  CREATE_LEAVE_REQUESTS: 'LEAVE:CREATE:OWN',
+  VIEW_OWN_LEAVE: 'LEAVE:VIEW:OWN',
+  VIEW_TEAM_LEAVE: 'LEAVE:VIEW:TEAM',
+  VIEW_ALL_LEAVE: 'LEAVE:VIEW:ALL',
+  APPROVE_LEAVE_REQUESTS: 'LEAVE:APPROVE:TEAM',
+  MANAGE_LEAVE_BALANCES: 'LEAVE:MANAGE:TEAM',
+  EXPORT_LEAVE_REPORTS: 'LEAVE:EXPORT:TEAM',
+
+  // Report Management
+  VIEW_OWN_REPORTS: 'REPORT:VIEW:OWN',
+  VIEW_TEAM_REPORTS: 'REPORT:VIEW:TEAM',
+  VIEW_ALL_REPORTS: 'REPORT:VIEW:ALL',
+  EXPORT_REPORTS: 'REPORT:EXPORT:TEAM',
+  MANAGE_REPORTS: 'REPORT:MANAGE:ALL',
+
+  // User Management
+  VIEW_OWN_PROFILE: 'USER:VIEW:OWN',
+  UPDATE_OWN_PROFILE: 'USER:UPDATE:OWN',
+  VIEW_TEAM_USERS: 'USER:VIEW:TEAM',
+  VIEW_ALL_USERS: 'USER:VIEW:ALL',
+  MANAGE_USERS: 'USER:MANAGE:ALL',
+  UPDATE_USER_PROFILES: 'USER:UPDATE:TEAM',
+
+  // Entity Management
+  VIEW_ENTITIES: 'ENTITY:VIEW:ALL',
+  CREATE_ENTITIES: 'ENTITY:CREATE:ALL',
+  UPDATE_ENTITIES: 'ENTITY:UPDATE:ALL',
+  DELETE_ENTITIES: 'ENTITY:DELETE:ALL',
+  MANAGE_ENTITIES: 'ENTITY:MANAGE:ALL',
+
+  // Department Management
+  VIEW_DEPARTMENTS: 'DEPARTMENT:VIEW:ALL',
+  CREATE_DEPARTMENTS: 'DEPARTMENT:CREATE:ALL',
+  UPDATE_DEPARTMENTS: 'DEPARTMENT:UPDATE:ALL',
+  DELETE_DEPARTMENTS: 'DEPARTMENT:DELETE:ALL',
+  MANAGE_DEPARTMENTS: 'DEPARTMENT:MANAGE:ALL',
+
+  // Holiday Management
+  VIEW_HOLIDAYS: 'HOLIDAY:VIEW:ALL',
+  CREATE_HOLIDAYS: 'HOLIDAY:CREATE:ALL',
+  UPDATE_HOLIDAYS: 'HOLIDAY:UPDATE:ALL',
+  DELETE_HOLIDAYS: 'HOLIDAY:DELETE:ALL',
+  MANAGE_HOLIDAYS: 'HOLIDAY:MANAGE:ALL',
+
+  // Role & Permission Management
+  VIEW_ROLES: 'ROLE:VIEW:ALL',
+  MANAGE_ROLES: 'ROLE:MANAGE:ALL',
+  ASSIGN_ROLES: 'ROLE:ASSIGN:ALL',
+  MANAGE_PERMISSIONS: 'PERMISSION:MANAGE:ALL',
+
+  // System Administration
+  SYSTEM_ADMIN: 'SYSTEM:ADMIN:ALL',
+  SYSTEM_SUPER_ADMIN: 'SYSTEM:SUPER_ADMIN:ALL',
+} as const;
+
+/**
+ * Role Permission Mappings
+ */
+export const ROLE_PERMISSIONS = {
+  [RoleName.EMPLOYEE]: [
+    PERMISSIONS.CREATE_REQUESTS,
+    PERMISSIONS.VIEW_OWN_REQUESTS,
+    PERMISSIONS.CANCEL_REQUESTS,
+    PERMISSIONS.CLOCK_IN,
+    PERMISSIONS.CLOCK_OUT,
+    PERMISSIONS.VIEW_OWN_ATTENDANCE,
+    PERMISSIONS.CREATE_LEAVE_REQUESTS,
+    PERMISSIONS.VIEW_OWN_LEAVE,
+    PERMISSIONS.VIEW_OWN_REPORTS,
+    PERMISSIONS.VIEW_OWN_PROFILE,
+    PERMISSIONS.UPDATE_OWN_PROFILE,
+    PERMISSIONS.VIEW_HOLIDAYS,
+  ],
+
+  [RoleName.MANAGER]: [
+    // Inherit all employee permissions
+    ...ROLE_PERMISSIONS[RoleName.EMPLOYEE] || [],
+    
+    // Manager-specific permissions
+    PERMISSIONS.VIEW_TEAM_REQUESTS,
+    PERMISSIONS.APPROVE_REQUESTS,
+    PERMISSIONS.REJECT_REQUESTS,
+    PERMISSIONS.VIEW_TEAM_ATTENDANCE,
+    PERMISSIONS.MANAGE_ATTENDANCE,
+    PERMISSIONS.APPROVE_LEAVE_REQUESTS,
+    PERMISSIONS.VIEW_TEAM_LEAVE,
+    PERMISSIONS.VIEW_TEAM_REPORTS,
+    PERMISSIONS.EXPORT_REPORTS,
+    PERMISSIONS.VIEW_TEAM_USERS,
+    PERMISSIONS.UPDATE_USER_PROFILES,
+  ],
+
+  [RoleName.HR]: [
+    // Inherit all manager permissions
+    ...ROLE_PERMISSIONS[RoleName.MANAGER] || [],
+    
+    // HR-specific permissions
+    PERMISSIONS.VIEW_ALL_REQUESTS,
+    PERMISSIONS.VIEW_ALL_ATTENDANCE,
+    PERMISSIONS.VIEW_ALL_LEAVE,
+    PERMISSIONS.MANAGE_LEAVE_BALANCES,
+    PERMISSIONS.EXPORT_LEAVE_REPORTS,
+    PERMISSIONS.VIEW_ALL_REPORTS,
+    PERMISSIONS.VIEW_ALL_USERS,
+    PERMISSIONS.MANAGE_USERS,
+    PERMISSIONS.CREATE_DEPARTMENTS,
+    PERMISSIONS.UPDATE_DEPARTMENTS,
+    PERMISSIONS.MANAGE_HOLIDAYS,
+  ],
+
+  [RoleName.ADMIN]: [
+    // Inherit all HR permissions
+    ...ROLE_PERMISSIONS[RoleName.HR] || [],
+    
+    // Admin-specific permissions
+    PERMISSIONS.DELETE_REQUESTS,
+    PERMISSIONS.EXPORT_ATTENDANCE,
+    PERMISSIONS.MANAGE_REPORTS,
+    PERMISSIONS.VIEW_ENTITIES,
+    PERMISSIONS.CREATE_ENTITIES,
+    PERMISSIONS.UPDATE_ENTITIES,
+    PERMISSIONS.DELETE_ENTITIES,
+    PERMISSIONS.MANAGE_ENTITIES,
+    PERMISSIONS.DELETE_DEPARTMENTS,
+    PERMISSIONS.MANAGE_DEPARTMENTS,
+    PERMISSIONS.CREATE_HOLIDAYS,
+    PERMISSIONS.UPDATE_HOLIDAYS,
+    PERMISSIONS.DELETE_HOLIDAYS,
+    PERMISSIONS.VIEW_ROLES,
+    PERMISSIONS.ASSIGN_ROLES,
+    PERMISSIONS.SYSTEM_ADMIN,
+  ],
+
+  [RoleName.SUPER_ADMIN]: [
+    // All permissions
+    ...Object.values(PERMISSIONS),
+  ],
+};
+
+/**
+ * Permission Descriptions
+ */
+export const PERMISSION_DESCRIPTIONS = {
+  [PERMISSIONS.CREATE_REQUESTS]: 'Create new requests (leave, remote work, etc.)',
+  [PERMISSIONS.VIEW_OWN_REQUESTS]: 'View own request history',
+  [PERMISSIONS.VIEW_TEAM_REQUESTS]: 'View team member requests',
+  [PERMISSIONS.VIEW_ALL_REQUESTS]: 'View all system requests',
+  [PERMISSIONS.APPROVE_REQUESTS]: 'Approve or reject team requests',
+  [PERMISSIONS.REJECT_REQUESTS]: 'Reject team requests',
+  [PERMISSIONS.CANCEL_REQUESTS]: 'Cancel own pending requests',
+  [PERMISSIONS.DELETE_REQUESTS]: 'Delete requests (admin only)',
+
+  [PERMISSIONS.CLOCK_IN]: 'Clock in for attendance',
+  [PERMISSIONS.CLOCK_OUT]: 'Clock out from attendance',
+  [PERMISSIONS.VIEW_OWN_ATTENDANCE]: 'View own attendance records',
+  [PERMISSIONS.VIEW_TEAM_ATTENDANCE]: 'View team attendance records',
+  [PERMISSIONS.VIEW_ALL_ATTENDANCE]: 'View all attendance records',
+  [PERMISSIONS.MANAGE_ATTENDANCE]: 'Manage team attendance records',
+  [PERMISSIONS.EXPORT_ATTENDANCE]: 'Export attendance reports',
+
+  [PERMISSIONS.CREATE_LEAVE_REQUESTS]: 'Create leave requests',
+  [PERMISSIONS.VIEW_OWN_LEAVE]: 'View own leave history',
+  [PERMISSIONS.VIEW_TEAM_LEAVE]: 'View team leave records',
+  [PERMISSIONS.VIEW_ALL_LEAVE]: 'View all leave records',
+  [PERMISSIONS.APPROVE_LEAVE_REQUESTS]: 'Approve team leave requests',
+  [PERMISSIONS.MANAGE_LEAVE_BALANCES]: 'Manage leave balances',
+  [PERMISSIONS.EXPORT_LEAVE_REPORTS]: 'Export leave reports',
+
+  [PERMISSIONS.VIEW_OWN_REPORTS]: 'View own reports',
+  [PERMISSIONS.VIEW_TEAM_REPORTS]: 'View team reports',
+  [PERMISSIONS.VIEW_ALL_REPORTS]: 'View all system reports',
+  [PERMISSIONS.EXPORT_REPORTS]: 'Export reports',
+  [PERMISSIONS.MANAGE_REPORTS]: 'Manage report system',
+
+  [PERMISSIONS.VIEW_OWN_PROFILE]: 'View own profile',
+  [PERMISSIONS.UPDATE_OWN_PROFILE]: 'Update own profile',
+  [PERMISSIONS.VIEW_TEAM_USERS]: 'View team member profiles',
+  [PERMISSIONS.VIEW_ALL_USERS]: 'View all user profiles',
+  [PERMISSIONS.MANAGE_USERS]: 'Manage user accounts',
+  [PERMISSIONS.UPDATE_USER_PROFILES]: 'Update team member profiles',
+
+  [PERMISSIONS.VIEW_ENTITIES]: 'View entities/locations',
+  [PERMISSIONS.CREATE_ENTITIES]: 'Create new entities',
+  [PERMISSIONS.UPDATE_ENTITIES]: 'Update entity information',
+  [PERMISSIONS.DELETE_ENTITIES]: 'Delete entities',
+  [PERMISSIONS.MANAGE_ENTITIES]: 'Full entity management',
+
+  [PERMISSIONS.VIEW_DEPARTMENTS]: 'View departments',
+  [PERMISSIONS.CREATE_DEPARTMENTS]: 'Create new departments',
+  [PERMISSIONS.UPDATE_DEPARTMENTS]: 'Update department information',
+  [PERMISSIONS.DELETE_DEPARTMENTS]: 'Delete departments',
+  [PERMISSIONS.MANAGE_DEPARTMENTS]: 'Full department management',
+
+  [PERMISSIONS.VIEW_HOLIDAYS]: 'View holiday calendar',
+  [PERMISSIONS.CREATE_HOLIDAYS]: 'Create holidays',
+  [PERMISSIONS.UPDATE_HOLIDAYS]: 'Update holiday information',
+  [PERMISSIONS.DELETE_HOLIDAYS]: 'Delete holidays',
+  [PERMISSIONS.MANAGE_HOLIDAYS]: 'Full holiday management',
+
+  [PERMISSIONS.VIEW_ROLES]: 'View system roles',
+  [PERMISSIONS.MANAGE_ROLES]: 'Manage system roles',
+  [PERMISSIONS.ASSIGN_ROLES]: 'Assign roles to users',
+  [PERMISSIONS.MANAGE_PERMISSIONS]: 'Manage system permissions',
+
+  [PERMISSIONS.SYSTEM_ADMIN]: 'System administration access',
+  [PERMISSIONS.SYSTEM_SUPER_ADMIN]: 'Super administrator access',
+};
+
+/**
+ * Role Descriptions
+ */
+export const ROLE_DESCRIPTIONS = {
+  [RoleName.EMPLOYEE]: 'Basic employee with personal data access',
+  [RoleName.MANAGER]: 'Team manager with team oversight capabilities',
+  [RoleName.HR]: 'Human resources with organization-wide access',
+  [RoleName.ADMIN]: 'System administrator with full system access',
+  [RoleName.SUPER_ADMIN]: 'Super administrator with unrestricted access',
+};
+
+/**
+ * Role Levels (1 = highest, 5 = lowest)
+ */
+export const ROLE_LEVELS = {
+  [RoleName.SUPER_ADMIN]: 1,
+  [RoleName.ADMIN]: 2,
+  [RoleName.HR]: 3,
+  [RoleName.MANAGER]: 4,
+  [RoleName.EMPLOYEE]: 5,
+};

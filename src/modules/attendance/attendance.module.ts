@@ -21,7 +21,6 @@ import { DailyAttendance } from './entities/daily-attendance.entity';
 import { AttendanceSession } from './entities/attendance-session.entity';
 import { LocationLog } from './entities/location-log.entity';
 import { UserEntityAssignment } from './entities/user-entity-assignment.entity';
-import { ReportingStructure } from './entities/reporting-structure.entity';
 import { RemoteWorkRequest } from './entities/remote-work-request.entity';
 import { AttendanceRequest } from './entities/attendance-request.entity';
 import { Request } from './entities/request.entity';
@@ -29,7 +28,6 @@ import { DailyAttendanceRepository } from './repositories/daily-attendance.repos
 import { AttendanceSessionRepository } from './repositories/attendance-session.repository';
 import { LocationLogRepository } from './repositories/location-log.repository';
 import { UserEntityAssignmentRepository } from './repositories/user-entity-assignment.repository';
-import { ReportingStructureRepository } from './repositories/reporting-structure.repository';
 import { RemoteWorkRequestRepository } from './repositories/remote-work-request.repository';
 import { AttendanceRequestRepository } from './repositories/attendance-request.repository';
 import { RequestRepository } from './repositories/request.repository';
@@ -56,7 +54,6 @@ import { DepartmentEntityAssignment } from '../department/entities/department-en
       AttendanceSession,
       LocationLog,
       UserEntityAssignment,
-      ReportingStructure,
       RemoteWorkRequest,
       AttendanceRequest,
       Request, // New unified request entity
@@ -94,7 +91,6 @@ import { DepartmentEntityAssignment } from '../department/entities/department-en
     AttendanceSessionRepository,
     LocationLogRepository,
     UserEntityAssignmentRepository,
-    ReportingStructureRepository,
     RemoteWorkRequestRepository,
     AttendanceRequestRepository,
     RequestRepository, // New unified request repository
@@ -114,7 +110,6 @@ import { DepartmentEntityAssignment } from '../department/entities/department-en
     AttendanceSessionRepository,
     LocationLogRepository,
     UserEntityAssignmentRepository,
-    ReportingStructureRepository,
     RemoteWorkRequestRepository,
     AttendanceRequestRepository,
     RequestRepository, // New unified request repository

@@ -3,7 +3,6 @@ export { DailyAttendance } from './entities/daily-attendance.entity';
 export { AttendanceSession } from './entities/attendance-session.entity';
 export { LocationLog } from './entities/location-log.entity';
 export { UserEntityAssignment } from './entities/user-entity-assignment.entity';
-export { ReportingStructure } from './entities/reporting-structure.entity';
 
 // DTOs
 export { ClockInDto } from './dto/clock-in.dto';
@@ -23,7 +22,6 @@ export { DailyAttendanceRepository } from './repositories/daily-attendance.repos
 export { AttendanceSessionRepository } from './repositories/attendance-session.repository';
 export { LocationLogRepository } from './repositories/location-log.repository';
 export { UserEntityAssignmentRepository } from './repositories/user-entity-assignment.repository';
-export { ReportingStructureRepository } from './repositories/reporting-structure.repository';
 
 // Interfaces
 export * from './interfaces/attendance.interface';

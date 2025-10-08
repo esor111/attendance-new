@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { LeaveRequest, LeaveRequestStatus, LeaveType, LeaveBalanceInfo } from '../entities/leave-request.entity';
 import { CreateLeaveRequestDto } from '../dto/create-leave-request.dto';
-import { ReportingStructureRepository } from '../../attendance/repositories/reporting-structure.repository';
 
 /**
  * Simplified Leave Service - Consolidated leave management operations
@@ -15,7 +14,6 @@ export class LeaveService {
   constructor(
     @InjectRepository(LeaveRequest)
     private readonly leaveRequestRepository: Repository<LeaveRequest>,
-    private readonly reportingStructureRepository: ReportingStructureRepository,
   ) {}
 
   /**
@@ -234,56 +232,6 @@ export class LeaveService {
   }
 
   /**
-   * Get team leave requests for managers
-   */
-  async getTeamLeaveRequests(managerId: string, startDate?: Date, endDate?: Date): Promise<LeaveRequest[]> {
-    // Get team member IDs from reporting structure
-    const teamMembers = await this.reportingStructureRepository.findCurrentTeamByManagerId(managerId);
-    const teamMemberIds = teamMembers.map(member => member.employeeId);
-
-    if (teamMemberIds.length === 0) {
-      return [];
-    }
-
-    const query = this.leaveRequestRepository
-      .createQueryBuilder('request')
-      .leftJoinAndSelect('request.user', 'user')
-      .leftJoinAndSelect('request.approver', 'approver')
-      .where('request.userId IN (:...teamMemberIds)', { teamMemberIds })
-      .orderBy('request.createdAt', 'DESC');
-
-    if (startDate && endDate) {
-      query.andWhere('request.startDate >= :startDate AND request.endDate <= :endDate', {
-        startDate,
-        endDate,
-      });
-    }
-
-    return await query.getMany();
-  }
-
-  /**
-   * Get pending team leave requests for managers
-   */
-  async getPendingTeamRequests(managerId: string): Promise<LeaveRequest[]> {
-    // Get team member IDs from reporting structure
-    const teamMembers = await this.reportingStructureRepository.findCurrentTeamByManagerId(managerId);
-    const teamMemberIds = teamMembers.map(member => member.employeeId);
-
-    if (teamMemberIds.length === 0) {
-      return [];
-    }
-
-    return await this.leaveRequestRepository
-      .createQueryBuilder('request')
-      .leftJoinAndSelect('request.user', 'user')
-      .where('request.userId IN (:...teamMemberIds)', { teamMemberIds })
-      .andWhere('request.status = :status', { status: LeaveRequestStatus.PENDING })
-      .orderBy('request.createdAt', 'ASC')
-      .getMany();
-  }
-
-  /**
    * Get leave type configuration
    */
   private getLeaveTypeConfig(leaveType: LeaveType): {
@@ -396,57 +344,26 @@ export class LeaveService {
    * Check if a user can approve a specific leave request
    */
   private async canApproveRequest(requestId: string, approverId: string): Promise<boolean> {
-    const request = await this.leaveRequestRepository.findOne({ where: { id: requestId } });
-    if (!request) {
-      return false;
-    }
-
-    // Check if approver is the direct manager of the requester
-    const isDirectManager = await this.reportingStructureRepository.existsRelationship(
-      request.userId,
-      approverId
-    );
-
-    if (isDirectManager) {
-      return true;
-    }
-
-    // Check if approver is in the management chain (indirect manager)
-    const managementChain = await this.reportingStructureRepository.getReportingChain(request.userId);
-    return managementChain.some(manager => manager.managerId === approverId);
+    // Simplified: No hierarchy check - RBAC handles permissions
+    // If user has approval permission, they can approve
+    return true;
   }
 
   /**
-   * Send approval notification to manager
+   * Send approval notification (placeholder - no manager hierarchy)
    */
   private async sendApprovalNotification(request: LeaveRequest): Promise<void> {
-    // Find the direct manager for approval
-    const manager = await this.reportingStructureRepository.findCurrentManagerByEmployeeId(request.userId);
-    
-    if (manager) {
-      // TODO: Implement notification system
-      console.log(`Approval notification sent to manager ${manager.managerId} for leave request ${request.id}`);
-    } else {
-      console.log(`No manager found for user ${request.userId}, leave request ${request.id} needs manual review`);
-    }
+    // Simplified: No manager lookup - notifications handled separately
+    console.log(`Leave request ${request.id} created for user ${request.userId} - awaiting approval`);
   }
 
   /**
    * Validate if user has access to a leave request
    */
   private async validateRequestAccess(request: LeaveRequest, userId: string): Promise<boolean> {
-    // User can access their own requests
-    if (request.userId === userId) {
-      return true;
-    }
-
-    // Managers can access their team members' requests
-    const isManager = await this.reportingStructureRepository.existsRelationship(
-      request.userId,
-      userId
-    );
-    
-    return isManager;
+    // Simplified: Users can only access their own requests
+    // Admins with proper permissions can access all (handled by RBAC)
+    return request.userId === userId;
   }
 
   /**

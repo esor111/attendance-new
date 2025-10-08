@@ -1,6 +1,5 @@
 import { Injectable, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
 import { RemoteWorkRequestRepository } from '../repositories/remote-work-request.repository';
-import { ReportingStructureRepository } from '../repositories/reporting-structure.repository';
 import { RemoteWorkRequest } from '../entities/remote-work-request.entity';
 import { CreateRemoteWorkRequestDto } from '../dto/create-remote-work-request.dto';
 import { ApproveRemoteWorkRequestDto } from '../dto/approve-remote-work-request.dto';
@@ -14,7 +13,6 @@ import { ApproveRemoteWorkRequestDto } from '../dto/approve-remote-work-request.
 export class RemoteWorkService {
   constructor(
     private readonly remoteWorkRepository: RemoteWorkRequestRepository,
-    private readonly reportingStructureRepository: ReportingStructureRepository,
   ) {}
 
   /**
@@ -71,14 +69,7 @@ export class RemoteWorkService {
       throw new BadRequestException(`Request is already ${request.status.toLowerCase()}`);
     }
 
-    // Verify manager has authority to approve this request
-    const hasAuthority = await this.reportingStructureRepository.existsRelationship(
-      request.userId, 
-      managerId
-    );
-    if (!hasAuthority) {
-      throw new BadRequestException('You do not have authority to approve this request');
-    }
+    // Simplified: No hierarchy check - RBAC handles permissions
 
     // Check if the requested date is still in the future
     const requestedDate = new Date(request.requestedDate);
@@ -125,26 +116,6 @@ export class RemoteWorkService {
       return await this.remoteWorkRepository.findByUserIdAndDateRange(userId, startDate, endDate);
     }
     return await this.remoteWorkRepository.findByUserId(userId);
-  }
-
-  /**
-   * Get team's remote work requests (for managers)
-   */
-  async getTeamRequests(
-    managerId: string, 
-    startDate?: Date, 
-    endDate?: Date
-  ): Promise<RemoteWorkRequest[]> {
-    const teamMemberIds = await this.reportingStructureRepository.getTeamMemberIds(managerId);
-    return await this.remoteWorkRepository.findByTeamMemberIds(teamMemberIds, startDate, endDate);
-  }
-
-  /**
-   * Get pending requests for manager approval
-   */
-  async getPendingTeamRequests(managerId: string): Promise<RemoteWorkRequest[]> {
-    const teamMemberIds = await this.reportingStructureRepository.getTeamMemberIds(managerId);
-    return await this.remoteWorkRepository.findPendingByTeamMemberIds(teamMemberIds);
   }
 
   /**

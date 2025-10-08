@@ -1,7 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
 import { AttendanceRequestRepository } from '../repositories/attendance-request.repository';
 import { DailyAttendanceRepository } from '../repositories/daily-attendance.repository';
-import { ReportingStructureRepository } from '../repositories/reporting-structure.repository';
 import { AttendanceRequest } from '../entities/attendance-request.entity';
 import { DailyAttendance } from '../entities/daily-attendance.entity';
 import { CreateAttendanceRequestDto } from '../dto/create-attendance-request.dto';
@@ -17,7 +16,6 @@ export class AttendanceRequestService {
   constructor(
     private readonly attendanceRequestRepository: AttendanceRequestRepository,
     private readonly dailyAttendanceRepository: DailyAttendanceRepository,
-    private readonly reportingStructureRepository: ReportingStructureRepository,
   ) {}
 
   /**
@@ -113,14 +111,7 @@ export class AttendanceRequestService {
       throw new BadRequestException('Request has already been processed');
     }
 
-    // Verify approver has permission to approve this request
-    const hasPermission = await this.reportingStructureRepository.existsRelationship(
-      request.userId,
-      approverId,
-    );
-    if (!hasPermission) {
-      throw new BadRequestException('No permission to approve this request');
-    }
+    // Simplified: No hierarchy check - RBAC handles permissions
 
     // Check if request is past deadline
     if (request.requestDeadline && new Date() > request.requestDeadline) {

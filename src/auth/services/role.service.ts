@@ -204,7 +204,7 @@ export class RoleService {
 
     // Check if already assigned
     let userRole = await this.userRoleRepository.findOne({
-      where: { userId, roleId, entityId: entityId || null },
+      where: { userId, roleId, entityId: entityId || undefined },
     });
 
     if (userRole) {
@@ -242,7 +242,7 @@ export class RoleService {
     const result = await this.userRoleRepository.delete({
       userId,
       roleId,
-      entityId: entityId || null,
+      entityId: entityId || undefined,
     });
 
     if (result.affected === 0) {

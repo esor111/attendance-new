@@ -164,7 +164,7 @@ export class PermissionSeedService {
         continue;
       }
 
-      for (const permissionName of permissions) {
+      for (const permissionName of permissions as string[]) {
         const permission = await this.permissionRepository.findOne({
           where: { name: permissionName },
         });

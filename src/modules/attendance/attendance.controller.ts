@@ -123,37 +123,6 @@ export class AttendanceController {
   }
 
   /**
-   * Get team attendance (for managers)
-   */
-  @Get('team')
-  async getTeamAttendance(
-    @CurrentUser() user: any,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-  ) {
-    const start = startDate ? new Date(startDate) : new Date();
-    const end = endDate ? new Date(endDate) : new Date();
-    
-    return await this.attendanceService.getTeamAttendance(user.id, start, end);
-  }
-
-  /**
-   * Get individual team member attendance
-   */
-  @Get('team/:employeeId')
-  async getTeamMemberAttendance(
-    @CurrentUser() user: any,
-    @Param('employeeId') employeeId: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-  ) {
-    const start = startDate ? new Date(startDate) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // Default 7 days
-    const end = endDate ? new Date(endDate) : new Date();
-    
-    return await this.attendanceService.getTeamMemberAttendance(user.id, employeeId, start, end);
-  }
-
-  /**
    * Get flagged attendance records
    */
   @Get('flagged')

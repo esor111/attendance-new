@@ -211,50 +211,6 @@ export class LeaveController {
   }
 
   /**
-   * Get team leave requests for managers
-   */
-  @Get('team-requests')
-  @ApiOperation({
-    summary: 'Get team leave requests',
-    description: 'Retrieve leave requests for team members (managers only)',
-  })
-  @ApiQuery({ name: 'startDate', type: String, required: false, example: '2025-10-01' })
-  @ApiQuery({ name: 'endDate', type: String, required: false, example: '2025-10-31' })
-  @ApiResponse({
-    status: 200,
-    description: 'Team leave requests',
-    schema: {
-      example: [
-        {
-          id: 'leave-request-uuid',
-          user: {
-            name: 'Jane Doe',
-            email: 'jane.doe@company.com',
-          },
-          leaveType: {
-            name: 'Annual Leave',
-          },
-          startDate: '2025-10-15',
-          endDate: '2025-10-17',
-          daysRequested: 3,
-          status: 'PENDING',
-          reason: 'Family vacation',
-        },
-      ],
-    },
-  })
-  async getTeamLeaveRequests(
-    @Request() req: any,
-    @Query('startDate') startDateStr?: string,
-    @Query('endDate') endDateStr?: string,
-  ) {
-    const startDate = startDateStr ? new Date(startDateStr) : undefined;
-    const endDate = endDateStr ? new Date(endDateStr) : undefined;
-    
-    return await this.leaveService.getTeamLeaveRequests(req.user.userId, startDate, endDate);
-  }
-
-  /**
    * Get user's leave balances
    */
   @Get('balance')
@@ -342,36 +298,4 @@ export class LeaveController {
     return await this.leaveService.getLeaveStatistics(req.user.userId, year);
   }
 
-  /**
-   * Get pending approvals for managers
-   */
-  @Get('pending-approvals')
-  @ApiOperation({
-    summary: 'Get pending approvals',
-    description: 'Retrieve leave requests pending approval for the manager',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Pending leave approvals',
-    schema: {
-      example: [
-        {
-          id: 'leave-request-uuid',
-          user: {
-            name: 'Jane Doe',
-            email: 'jane.doe@company.com',
-          },
-          leaveType: 'ANNUAL',
-          startDate: '2025-10-15',
-          endDate: '2025-10-17',
-          daysRequested: 3,
-          reason: 'Family vacation',
-          createdAt: '2025-10-05T10:00:00Z',
-        },
-      ],
-    },
-  })
-  async getPendingApprovals(@Request() req: any) {
-    return await this.leaveService.getPendingTeamRequests(req.user.userId);
-  }
 }

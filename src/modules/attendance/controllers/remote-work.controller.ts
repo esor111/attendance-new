@@ -75,29 +75,6 @@ export class RemoteWorkController {
   }
 
   /**
-   * Get team's remote work requests (for managers)
-   */
-  @Get('team-requests')
-  async getTeamRequests(
-    @CurrentUser() user: any,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-  ) {
-    const start = startDate ? new Date(startDate) : undefined;
-    const end = endDate ? new Date(endDate) : undefined;
-    
-    return await this.remoteWorkService.getTeamRequests(user.id, start, end);
-  }
-
-  /**
-   * Get pending team requests for approval (for managers)
-   */
-  @Get('team-requests/pending')
-  async getPendingTeamRequests(@CurrentUser() user: any) {
-    return await this.remoteWorkService.getPendingTeamRequests(user.id);
-  }
-
-  /**
    * Remote work clock-in endpoint
    */
   @Post('clock-in')

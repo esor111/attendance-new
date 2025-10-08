@@ -8,7 +8,6 @@ import { DepartmentScheduleService } from '../../department/services/department-
 import { DailyAttendanceRepository } from '../repositories/daily-attendance.repository';
 import { AttendanceSessionRepository } from '../repositories/attendance-session.repository';
 import { LocationLogRepository } from '../repositories/location-log.repository';
-import { ReportingStructureRepository } from '../repositories/reporting-structure.repository';
 import { UserRepository } from '../../user/repositories/user.repository';
 import { DailyAttendance } from '../entities/daily-attendance.entity';
 import { AttendanceSession } from '../entities/attendance-session.entity';
@@ -39,7 +38,6 @@ export class AttendanceService implements AttendanceServiceInterface {
     private readonly attendanceRepository: DailyAttendanceRepository,
     private readonly sessionRepository: AttendanceSessionRepository,
     private readonly locationLogRepository: LocationLogRepository,
-    private readonly reportingStructureRepository: ReportingStructureRepository,
     private readonly userRepository: UserRepository,
   ) {}
 
@@ -584,52 +582,6 @@ export class AttendanceService implements AttendanceServiceInterface {
     if (!attendance) return null;
 
     return await this.locationLogRepository.findActiveByAttendanceId(attendance.id);
-  }
-
-  /**
-   * Get team attendance for managers
-   */
-  async getTeamAttendance(managerId: string, startDate: Date, endDate: Date): Promise<any> {
-    const teamMemberIds = await this.reportingStructureRepository.getTeamMemberIds(managerId);
-    
-    if (teamMemberIds.length === 0) {
-      return {
-        teamMembers: [],
-        statistics: {
-          totalDays: 0,
-          presentDays: 0,
-          absentDays: 0,
-          lateDays: 0,
-          flaggedDays: 0,
-        },
-      };
-    }
-
-    const attendanceRecords = await this.attendanceRepository.findByUserIds(teamMemberIds, startDate, endDate);
-    const statistics = await this.attendanceRepository.getAttendanceStats(teamMemberIds, startDate, endDate);
-
-    return {
-      teamMembers: attendanceRecords,
-      statistics,
-    };
-  }
-
-  /**
-   * Get individual team member attendance
-   */
-  async getTeamMemberAttendance(
-    managerId: string,
-    employeeId: string,
-    startDate: Date,
-    endDate: Date,
-  ): Promise<DailyAttendance[]> {
-    // Verify manager has access to this employee
-    const hasAccess = await this.reportingStructureRepository.existsRelationship(employeeId, managerId);
-    if (!hasAccess) {
-      throw new BadRequestException('No access to this employee\'s attendance data');
-    }
-
-    return await this.attendanceRepository.findByUserIdAndDateRange(employeeId, startDate, endDate);
   }
 
   /**

@@ -1,7 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { RequestRepository } from '../repositories/request.repository';
 import { DailyAttendanceRepository } from '../repositories/daily-attendance.repository';
-import { ReportingStructureRepository } from '../repositories/reporting-structure.repository';
 import { 
   Request, 
   RequestType, 
@@ -22,7 +21,6 @@ export class RequestService {
   constructor(
     private readonly requestRepository: RequestRepository,
     private readonly dailyAttendanceRepository: DailyAttendanceRepository,
-    private readonly reportingStructureRepository: ReportingStructureRepository,
   ) {}
 
   /**
@@ -590,37 +588,18 @@ export class RequestService {
    * Check if user can approve a request
    */
   private async canApproveRequest(request: Request, approverId: string): Promise<boolean> {
-    // Check if approver is the direct manager of the requester
-    const isDirectManager = await this.reportingStructureRepository.existsRelationship(
-      request.userId,
-      approverId,
-    );
-
-    if (isDirectManager) {
-      return true;
-    }
-
-    // Check if approver is in the management chain (indirect manager)
-    const managementChain = await this.reportingStructureRepository.getReportingChain(request.userId);
-    return managementChain.some(manager => manager.managerId === approverId);
+    // Simplified: No hierarchy check - RBAC handles permissions
+    // If user has approval permission, they can approve
+    return true;
   }
 
   /**
    * Validate if user has access to a request
    */
   private async validateRequestAccess(request: Request, userId: string): Promise<boolean> {
-    // User can access their own requests
-    if (request.userId === userId) {
-      return true;
-    }
-
-    // Managers can access their team members' requests
-    const isManager = await this.reportingStructureRepository.existsRelationship(
-      request.userId,
-      userId,
-    );
-    
-    return isManager;
+    // Simplified: Users can only access their own requests
+    // Admins with proper permissions can access all (handled by RBAC)
+    return request.userId === userId;
   }
 
   /**
@@ -673,17 +652,11 @@ export class RequestService {
   }
 
   /**
-   * Send approval notification to manager (placeholder)
+   * Send approval notification (placeholder - no manager hierarchy)
    */
   private async sendApprovalNotification(request: Request): Promise<void> {
-    // Find the direct manager for approval
-    const manager = await this.reportingStructureRepository.findCurrentManagerByEmployeeId(request.userId);
-    
-    if (manager) {
-      console.log(`Approval notification sent to manager ${manager.managerId} for ${request.type} request ${request.id}`);
-    } else {
-      console.log(`No manager found for user ${request.userId}, ${request.type} request ${request.id} needs manual review`);
-    }
+    // Simplified: No manager lookup - notifications handled separately
+    console.log(`${request.type} request ${request.id} created for user ${request.userId} - awaiting approval`);
   }
 
   /**
